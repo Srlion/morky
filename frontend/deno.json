@@ -1,0 +1,6 @@
+{
+    "unstable": ["fmt-component"],
+    "imports": {
+        "$lib/": "./src/lib/"
+    }
+}
