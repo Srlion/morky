@@ -144,6 +144,10 @@ async fn container_sampler() {
         while let Ok(Some(line)) = lines.next_line().await {
             buf.push_str(&line);
             buf.push('\n');
+            if buf.len() > 1024 * 1024 {
+                buf.clear();
+                continue;
+            }
             if line.trim() == "]" {
                 if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&buf) {
                     let parsed = parse_container_stats(arr).await;
