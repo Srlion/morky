@@ -1,11 +1,9 @@
-use crate::models::{Session, User};
-use argon2::{
-    Argon2, PasswordHash, PasswordHasher as _, PasswordVerifier,
-    password_hash::{SaltString, rand_core::OsRng},
-};
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use maw::prelude::{minijinja::context, *};
 use serde::Deserialize;
 use validator::Validate;
+
+use crate::models::{Session, User};
 
 pub mod middlewares;
 
@@ -35,15 +33,6 @@ async fn signin_page(c: &mut Ctx) {
 }
 
 async fn signin_action(c: &mut Ctx) {
-    {
-        let salt = SaltString::generate(&mut OsRng);
-        if let Ok(hash) = Argon2::default().hash_password("12345678".as_bytes(), &salt) {
-            User::create(&"ahmedwagihe.0@gmail.com", &"Srlion", &hash.to_string())
-                .await
-                .ok();
-        }
-    }
-
     let form: SigninForm = match c.req.form().await {
         Ok(f) => f,
         Err(_) => return c.close(),
