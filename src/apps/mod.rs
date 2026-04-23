@@ -80,7 +80,7 @@ struct CreateBody {
 
 fn validate_app_name(name: &str) -> Result<(), &'static str> {
     if name.is_empty() || name.len() > 63 {
-        return Err("app name must be 1–63 characters");
+        return Err("app name must be 1-63 characters");
     }
     if !name
         .chars()

@@ -2,10 +2,10 @@
 set -euo pipefail
 
 REPO="srlion/morky"
+IMAGE="ghcr.io/srlion/morky"
 SERVICE_USER="${SUDO_USER:-$(whoami)}"
 SERVICE_HOME=$(getent passwd "$SERVICE_USER" | cut -d: -f6)
 SERVICE_UID=$(id -u "$SERVICE_USER")
-BIN_DIR="$SERVICE_HOME/.local/bin"
 QUADLET_DIR="$SERVICE_HOME/.config/containers/systemd"
 DATA_DIR="$SERVICE_HOME/.local/share/morky"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -30,8 +30,12 @@ as_user() {
 }
 
 ctl() { as_user bash -c "XDG_RUNTIME_DIR=/run/user/$SERVICE_UID systemctl --user $*"; }
-is_installed() { as_user bash -c "command -v morky" &>/dev/null; }
-is_active()    { ctl "is-active --quiet morky 2>/dev/null"; }
+is_active() { ctl "is-active --quiet morky 2>/dev/null"; }
+
+is_installed() {
+  # installed = quadlet files exist
+  [[ -f "$QUADLET_DIR/morky.container" ]]
+}
 
 install_quadlets() {
   if [[ -d "$QUADLET_SRC" ]]; then
@@ -44,6 +48,10 @@ install_quadlets() {
   fi
 }
 
+get_latest_tag() {
+  curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep tag_name | cut -d'"' -f4
+}
+
 if ! is_installed && [[ "$HAS_SUDO" == false ]]; then
   echo "First install requires root. Run with sudo."
   exit 1
@@ -52,7 +60,6 @@ fi
 if is_installed; then echo "Updating morky for user: $SERVICE_USER"
 else echo "Installing morky for user: $SERVICE_USER"; fi
 
-# first install or full update
 if [[ "$HAS_SUDO" == true ]]; then
   run "podman" bash -c \
     'curl -fsSL https://github.com/srlion/podman-static/raw/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh'
@@ -77,16 +84,13 @@ else
   echo "(no sudo - skipping podman, sysctl, linger)"
 fi
 
-as_user mkdir -p "$BIN_DIR" "$DATA_DIR/haproxy" "$QUADLET_DIR"
+as_user mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
-run "morky binary" as_user bash -c "
-  LATEST=\$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep tag_name | cut -d'\"' -f4)
-  curl -fsSL \"https://github.com/$REPO/releases/download/\$LATEST/morky-linux-amd64\" -o /tmp/morky-new
-  chmod +x /tmp/morky-new
-  mv /tmp/morky-new \"$BIN_DIR/morky\"
-"
-
+TAG=$(get_latest_tag)
 run "quadlet files" install_quadlets
+
+# patch quadlet to use the GHCR image + tag
+as_user sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
 
 run "daemon reload" ctl "daemon-reload"
 
@@ -97,4 +101,4 @@ else
 fi
 
 echo ""
-echo "Done!"
+echo "Done! morky ${TAG} is running."
