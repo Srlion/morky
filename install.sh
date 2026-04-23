@@ -88,7 +88,9 @@ TAG=$(get_latest_tag)
 run "quadlet files" install_quadlets
 
 # patch quadlet to use the GHCR image + tag
-as_user sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
+if [[ ! -d "$QUADLET_SRC" ]]; then
+  as_user sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
+fi
 
 run "daemon reload" ctl "daemon-reload"
 
