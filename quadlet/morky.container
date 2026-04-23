@@ -1,5 +1,7 @@
 [Unit]
 Description=Morky
+Requires=morky-haproxy-net.network
+After=morky-haproxy-net.network
 
 [Container]
 ContainerName=morky
