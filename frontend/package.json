@@ -1,0 +1,31 @@
+{
+    "name": "frontend",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "scripts": {
+        "dev": "vite dev",
+        "build-watch": "vite build --watch --mode development",
+        "build": "deno run -A npm:vite build",
+        "check": "svelte-kit sync && svelte-check",
+        "preview": "vite preview",
+        "prepare": "svelte-kit sync || echo ''"
+    },
+    "dependencies": {
+        "@iconify-json/lucide": "^1.2.102",
+        "@iconify/tailwind4": "^1.2.3",
+        "chart.js": "^4.5.1",
+        "daisyui": "^5.5.19",
+        "date-fns": "^4.1.0"
+    },
+    "devDependencies": {
+        "@sveltejs/adapter-static": "^3.0.10",
+        "@sveltejs/kit": "^2.57.1",
+        "@sveltejs/vite-plugin-svelte": "^7.0.0",
+        "@tailwindcss/vite": "^4.2.2",
+        "svelte": "^5.55.4",
+        "svelte-check": "^4.4.6",
+        "tailwindcss": "^4.2.2",
+        "vite": "^8.0.8"
+    }
+}

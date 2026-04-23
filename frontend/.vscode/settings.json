@@ -1,0 +1,7 @@
+{
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "deno.enable": true,
+  "deno.config": "./deno.json"
+}

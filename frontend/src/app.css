@@ -1,0 +1,12 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: business --default;
+}
+@plugin "daisyui/theme" {
+  name: "business";
+  default: true;
+  --radius-box: 0.5rem;
+  --radius-field: 0.5rem;
+  --radius-selector: 0.5rem;
+}
+@plugin "@iconify/tailwind4";
