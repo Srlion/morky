@@ -48,7 +48,7 @@ install_quadlets() {
 }
 
 get_latest_tag() {
-  curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep tag_name | cut -d'"' -f4
+  curl -s --max-time 10 "https://api.github.com/repos/$REPO/releases/latest" | grep tag_name | cut -d'"' -f4
 }
 
 FIRST_INSTALL=false
@@ -75,7 +75,6 @@ if [[ "$HAS_SUDO" == true ]]; then
     echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-morky.conf >/dev/null
     sudo sysctl -q --system
   "
-
   run "user lingering" sudo loginctl enable-linger "$SERVICE_USER"
   run "podman socket" ctl "enable --now podman.socket"
 else
@@ -84,10 +83,15 @@ fi
 
 as_user mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
-TAG=$(get_latest_tag)
+if [[ -d "$QUADLET_SRC" ]]; then
+  TAG="dev"
+else
+  TAG=$(get_latest_tag)
+fi
+
 run "quadlet files" install_quadlets
 
-# patch quadlet to use the GHCR image + tag
+# patch quadlet to use the GHCR image + tag (production only)
 if [[ ! -d "$QUADLET_SRC" ]]; then
   as_user sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
 fi
@@ -97,7 +101,7 @@ run "daemon reload" ctl "daemon-reload"
 if is_active; then
   run "restarting morky" ctl "restart morky"
 else
-  run "starting morky" ctl "enable --now morky"
+  run "starting morky" ctl "start morky"
 fi
 
 if [[ "$FIRST_INSTALL" == true ]]; then
