@@ -57,4 +57,14 @@ impl User {
             .fetch_one()
             .await
     }
+
+    pub async fn update_password(id: i64, password_hash: &str) -> db::Result<()> {
+        conn()
+            .query("UPDATE users SET password_hash = ? WHERE id = ?")
+            .bind(password_hash)
+            .bind(id)
+            .execute()
+            .await?;
+        Ok(())
+    }
 }
