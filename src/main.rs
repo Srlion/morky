@@ -7,6 +7,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberI
 mod apps;
 mod auth;
 mod backup;
+mod cli;
 mod common;
 mod constants;
 mod db;
@@ -34,6 +35,12 @@ struct Assets;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    if let Some(sub) = std::env::args().nth(1) {
+        if sub == "setup" {
+            return cli::setup().await;
+        }
+    }
+
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(std::io::stdout());
     tracing_subscriber::registry()
         .with(EnvFilter::new(constants::rust_log()))

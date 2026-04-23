@@ -33,7 +33,6 @@ ctl() { as_user bash -c "XDG_RUNTIME_DIR=/run/user/$SERVICE_UID systemctl --user
 is_active() { ctl "is-active --quiet morky 2>/dev/null"; }
 
 is_installed() {
-  # installed = quadlet files exist
   [[ -f "$QUADLET_DIR/morky.container" ]]
 }
 
@@ -52,13 +51,21 @@ get_latest_tag() {
   curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep tag_name | cut -d'"' -f4
 }
 
-if ! is_installed && [[ "$HAS_SUDO" == false ]]; then
+FIRST_INSTALL=false
+if ! is_installed; then
+  FIRST_INSTALL=true
+fi
+
+if [[ "$FIRST_INSTALL" == true ]] && [[ "$HAS_SUDO" == false ]]; then
   echo "First install requires root. Run with sudo."
   exit 1
 fi
 
-if is_installed; then echo "Updating morky for user: $SERVICE_USER"
-else echo "Installing morky for user: $SERVICE_USER"; fi
+if [[ "$FIRST_INSTALL" == false ]]; then
+  echo "Updating morky for user: $SERVICE_USER"
+else
+  echo "Installing morky for user: $SERVICE_USER"
+fi
 
 if [[ "$HAS_SUDO" == true ]]; then
   run "podman" bash -c \
@@ -71,15 +78,6 @@ if [[ "$HAS_SUDO" == true ]]; then
 
   run "user lingering" sudo loginctl enable-linger "$SERVICE_USER"
   run "podman socket" ctl "enable --now podman.socket"
-
-  # migrate old system service
-  if [[ -f /etc/systemd/system/morky.service ]]; then
-    run "removing old system service" bash -c "
-      sudo systemctl disable --now morky 2>/dev/null || true
-      sudo rm -f /etc/systemd/system/morky.service
-      sudo systemctl daemon-reload
-    "
-  fi
 else
   echo "(no sudo - skipping podman, sysctl, linger)"
 fi
@@ -98,6 +96,17 @@ if is_active; then
   run "restarting morky" ctl "restart morky"
 else
   run "starting morky" ctl "enable --now morky"
+fi
+
+if [[ "$FIRST_INSTALL" == true ]]; then
+  echo ""
+  read -rp "Enter your email: " MORKY_EMAIL
+  MORKY_PASSWORD=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 24)
+  as_user bash -c "XDG_RUNTIME_DIR=/run/user/$SERVICE_UID podman exec morky morky setup --email '$MORKY_EMAIL' --password '$MORKY_PASSWORD'"
+  echo ""
+  echo "Account created!"
+  echo "  Email:    $MORKY_EMAIL"
+  echo "  Password: $MORKY_PASSWORD"
 fi
 
 echo ""
