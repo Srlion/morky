@@ -1,4 +1,7 @@
-use std::sync::{Arc, LazyLock};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, LazyLock},
+};
 
 use maw::prelude::*;
 use serde::Serialize;
@@ -22,7 +25,8 @@ pub struct SystemStats {
 
 const MAX_HISTORY: usize = 100;
 
-static HISTORY: LazyLock<Mutex<Vec<SystemStats>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+static HISTORY: LazyLock<Mutex<VecDeque<SystemStats>>> =
+    LazyLock::new(|| Mutex::new(VecDeque::new()));
 
 static CONTAINER_STATS: LazyLock<Mutex<Arc<[ContainerStats]>>> =
     LazyLock::new(|| Mutex::new(Arc::new([])));
@@ -89,7 +93,7 @@ async fn system_sampler() {
         };
 
         let mut h = HISTORY.lock().await;
-        h.push(s);
+        h.push_back(s);
         if h.len() > MAX_HISTORY {
             h.remove(0);
         }
@@ -217,7 +221,7 @@ async fn stats_handler(c: &mut Ctx) {
 
 async fn processes_handler(c: &mut Ctx) {
     let containers = read_container_stats().await;
-    let latest = HISTORY.lock().await.last().cloned().unwrap_or_default();
+    let latest = HISTORY.lock().await.back().cloned().unwrap_or_default();
     let ctr_cpu: f64 = containers
         .iter()
         .map(|c| c.cpu.trim_end_matches('%').parse::<f64>().unwrap_or(0.0))
