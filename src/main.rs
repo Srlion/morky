@@ -49,8 +49,6 @@ async fn main() -> Result<(), anyhow::Error> {
 
     tokio_handle::init().await;
 
-    watch_frontend();
-
     db::init().await?;
     networking::init().await?;
     deploy::init().await; // register job types
@@ -122,17 +120,4 @@ fn routes() -> Router {
 async fn me_handler(c: &mut Ctx) {
     let user: &models::User = c.res.locals.get("user").unwrap();
     c.res.json(serde_json::json!(user));
-}
-
-fn watch_frontend() {
-    // #[cfg(debug_assertions)]
-    // tokio::spawn(async {
-    //     let mut child = tokio::process::Command::new("deno")
-    //         .args(["task", "build-watch"])
-    //         .stdout(std::process::Stdio::null())
-    //         .current_dir("frontend")
-    //         .spawn()
-    //         .expect("Failed to start frontend watcher");
-    //     child.wait().await.ok();
-    // });
 }
