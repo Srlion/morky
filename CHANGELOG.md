@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.3.0](https://github.com/Srlion/morky/compare/v0.2.0...v0.3.0) (2026-04-24)
+
+
+### Features
+
+* cache settings in memory and make get() sync ([9462c6c](https://github.com/Srlion/morky/commit/9462c6c8004ab2bd435d973f971c30375786c1d8))
+
+
+### Bug Fixes
+
+* simplify podman installation command ([379c351](https://github.com/Srlion/morky/commit/379c351d979001377db575b9131531500f8aa4e4))
+* some quick cleanup ([552f442](https://github.com/Srlion/morky/commit/552f442c6a1282a1c9fe63ae7a0a863458f26ac1))
+
 ## [0.2.0](https://github.com/Srlion/morky/compare/v0.1.0...v0.2.0) (2026-04-24)
 
 
