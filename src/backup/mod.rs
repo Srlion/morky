@@ -116,6 +116,13 @@ async fn do_backup() -> Result<(), String> {
         .await
         .map_err(|e| format!("mkdir: {e}"))?;
 
+    fs::write(
+        format!("{BACKUP_DIR}/version.txt"),
+        env!("CARGO_PKG_VERSION"),
+    )
+    .await
+    .map_err(|e| format!("write version.txt: {e}"))?;
+
     // 1. backup sqlite via VACUUM INTO
     let db_backup_path = format!("{BACKUP_DIR}/database.db");
     conn()
@@ -166,7 +173,7 @@ async fn do_backup() -> Result<(), String> {
     // 3. tar
     let tar_path = format!("{BACKUP_DIR}/backup.tar.gz");
 
-    let mut tar_args = vec!["-czf", &tar_path, "database.db"];
+    let mut tar_args = vec!["-czf", &tar_path, "version.txt", "database.db"];
     let volumes_dir = format!("{BACKUP_DIR}/volumes");
     if Path::new(&volumes_dir).exists() {
         tar_args.push("volumes");
