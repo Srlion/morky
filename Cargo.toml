@@ -18,6 +18,7 @@ http = "1.4.0"
 hyper = { version = "1.9.0", features = [] }
 jsonwebtoken = { version = "10.3.0", features = ["rust_crypto"] }
 maw = { version = "0.28.0", features = ["full", "static_files_debug_embed"] }
+mimalloc = "0.1.50"
 num_cpus = "1.17.0"
 rand = "0.10.1"
 regex = "1.12.3"
