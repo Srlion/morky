@@ -69,7 +69,7 @@ ctl() { systemctl --user "$@"; }
 is_active() { ctl is-active --quiet morky 2>/dev/null; }
 
 is_installed() {
-    [[ -f "$QUADLET_DIR/morky.container" ]]
+    [[ -f "$DATA_DIR/data/db-sqlite.db" ]]
 }
 
 install_quadlets() {
@@ -105,7 +105,7 @@ if [[ -n "$RESTORE_FILE" ]]; then
     if is_installed && is_active; then
         echo ""
         echo "WARNING: morky is currently running. Restoring will replace ALL existing data."
-        read -rp "Continue? [y/N] " confirm
+        read -rp "Continue? [y/N] " confirm </dev/tty
         [[ "$confirm" =~ ^[Yy]$ ]] || exit 0
     fi
 
@@ -164,6 +164,13 @@ if [[ ! -d "$QUADLET_SRC" ]]; then
     sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
 fi
 
+# First install: collect email and inject as env var for auto-setup
+if [[ "$FIRST_INSTALL" == true ]] && [[ -z "$RESTORE_FILE" ]]; then
+    read -rp "Enter your email: " MORKY_EMAIL </dev/tty
+    sed -i "/^\[Container\]/a Environment=MORKY_ADMIN_EMAIL=${MORKY_EMAIL}" \
+        "$QUADLET_DIR/morky.container"
+fi
+
 run "daemon reload" ctl daemon-reload
 
 # restore: stop morky, restore data, then start
@@ -204,14 +211,31 @@ else
     fi
 
     if [[ "$FIRST_INSTALL" == true ]]; then
-        echo ""
-        read -rp "Enter your email: " MORKY_EMAIL
-        MORKY_PASSWORD=$(tr -dc 'a-zA-Z0-9' </dev/urandom | head -c 24)
-        podman exec morky morky setup --email "$MORKY_EMAIL" --password "$MORKY_PASSWORD"
-        echo ""
-        echo "Account created!"
-        echo "  Email:    $MORKY_EMAIL"
-        echo "  Password: $MORKY_PASSWORD"
+        # Remove email from quadlet now that morky has started and read it
+        sed -i '/^Environment=MORKY_ADMIN_EMAIL/d' \
+            "$QUADLET_DIR/morky.container"
+        ctl daemon-reload
+
+        # Wait for morky to write the credentials file
+        CREDS_FILE="$DATA_DIR/data/admin_credentials"
+        for _ in $(seq 1 30); do
+            [[ -f "$CREDS_FILE" ]] && break
+            sleep 1
+        done
+
+        if [[ -f "$CREDS_FILE" ]]; then
+            MORKY_EMAIL=$(sed -n '1p' "$CREDS_FILE")
+            MORKY_PASSWORD=$(sed -n '2p' "$CREDS_FILE")
+            rm -f "$CREDS_FILE"
+            echo ""
+            echo "Account created!"
+            echo "  Email:    $MORKY_EMAIL"
+            echo "  Password: $MORKY_PASSWORD"
+        else
+            echo ""
+            echo "Warning: could not read credentials. Check logs:"
+            echo "  journalctl --user -u morky -n 20"
+        fi
     fi
 
     echo ""
