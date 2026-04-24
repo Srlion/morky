@@ -1,9 +1,5 @@
-pub fn is_prod() -> bool {
-    envd::dyn_var!("RUST_ENV").starts_with("prod")
-}
-
 pub fn db_path() -> String {
-    envd::dyn_var!("DB_PATH")
+    std::env::var("DB_PATH").expect("DB_PATH is required")
 }
 
 pub fn cookie_secret_key() -> String {
@@ -23,9 +19,16 @@ pub fn cookie_secret_key() -> String {
 }
 
 pub fn rust_log() -> String {
-    envd::dyn_var!("RUST_LOG")
+    std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string())
+}
+
+pub fn host() -> String {
+    std::env::var("APP_HOST").unwrap_or_else(|_| "0.0.0.0".to_string())
 }
 
 pub fn port() -> u16 {
-    envd::var!("PORT": u16)
+    std::env::var("PORT")
+        .unwrap_or_else(|_| "9764".to_string())
+        .parse()
+        .unwrap()
 }

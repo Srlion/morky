@@ -8,20 +8,31 @@
 
     // Panel
     let panelDomain = $state("");
+    let proxyIpHeader = $state("");
     let saving = $state(false);
 
     $effect(() => {
         panelDomain = data.settings?.panel_domain ?? "";
+        proxyIpHeader = data.settings?.proxy_ip_header ?? "";
     });
 
     let original = $derived(data.settings?.panel_domain ?? "");
-    let dirty = $derived(panelDomain.trim().toLowerCase() !== original);
+    let originalHeader = $derived(
+        data.settings?.proxy_ip_header ?? "CF-Connecting-IP",
+    );
+    let dirty = $derived(
+        panelDomain.trim().toLowerCase() !== original ||
+            proxyIpHeader.trim() !== originalHeader,
+    );
 
     async function saveDomain() {
         saving = true;
         try {
             const pd = panelDomain.trim().toLowerCase() || null;
-            await api.put("/settings", { panel_domain: pd });
+            await api.put("/settings", {
+                panel_domain: pd,
+                proxy_ip_header: proxyIpHeader.trim() || null,
+            });
             toaster.success({ title: "Settings saved" });
             await invalidateAll();
         } catch (e) {
@@ -107,6 +118,20 @@
                 <span class="text-xs text-base-content/40">
                     Must be a valid FQDN (e.g. panel.yourdomain.com). Leave
                     empty to disable.
+                </span>
+            </label>
+            <label class="flex flex-col gap-1">
+                <span class="label">Proxy IP Header</span>
+                <input
+                    class="input input-bordered w-full text-sm font-mono"
+                    bind:value={proxyIpHeader}
+                    placeholder="CF-Connecting-IP"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <span class="text-xs text-base-content/40">
+                    HTTP header used to get the real client IP from your reverse
+                    proxy.
                 </span>
             </label>
         </div>

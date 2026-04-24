@@ -26,6 +26,7 @@ async fn get(c: &mut Ctx) {
 #[derive(Deserialize)]
 struct UpdateBody {
     panel_domain: Option<String>,
+    proxy_ip_header: Option<String>,
 }
 
 async fn update(c: &mut Ctx) {
@@ -38,6 +39,7 @@ async fn update(c: &mut Ctx) {
                 .json(&serde_json::json!({"error": "invalid"}));
         }
     };
+
     let pd = body
         .panel_domain
         .map(|s| s.trim().to_lowercase())
@@ -50,7 +52,18 @@ async fn update(c: &mut Ctx) {
                 .json(&serde_json::json!({"error": "invalid domain"}));
         }
     }
-    match Settings::set_panel_domain(pd).await {
+
+    let header = body
+        .proxy_ip_header
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty());
+
+    let mut update = Settings::update().panel_domain(pd);
+    if let Some(h) = header {
+        update = update.proxy_ip_header(h);
+    }
+
+    match update.apply().await {
         Ok(settings) => c
             .res
             .json(&serde_json::json!({"ok": true, "settings": settings})),

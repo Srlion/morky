@@ -17,6 +17,9 @@ Environment=MORKY_DATA_DIR=/data
 Environment=MORKY_HOST_DATA_DIR=%h/.local/share/morky
 Environment=DB_PATH=/data/data/db-sqlite.db
 Environment=CONTAINER_HOST=unix:///run/podman/podman.sock
+Environment=APP_HOST=0.0.0.0
+Environment=PORT=9764
+Environment=RUST_LOG=info
 
 PublishPort=9764:9764
 

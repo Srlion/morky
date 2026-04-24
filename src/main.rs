@@ -29,6 +29,8 @@ use common::hex;
 pub use http_client::client as http_client;
 pub use tokio_handle::tokio_handle;
 
+use crate::models::Settings;
+
 #[derive(rust_embed::RustEmbed)]
 #[folder = "frontend/dist/"]
 struct Assets;
@@ -57,14 +59,14 @@ async fn main() -> Result<(), anyhow::Error> {
     monitoring::start_sampler();
 
     App::new()
-        .proxy_header(if constants::is_prod() {
-            "CF-Connecting-IP"
-        } else {
-            ""
+        .proxy_header_fn(|| {
+            Settings::get()
+                .ok()
+                .filter(|s| s.panel_domain.is_some())
+                .map(|s| s.proxy_ip_header)
         })
         .router(routes())
-        // .dump_routes(!constants::is_prod())
-        .listen((envd::var!("HOST"), constants::port()))
+        .listen((constants::host(), constants::port()))
         .await?;
 
     Ok(())
@@ -86,7 +88,11 @@ fn routes() -> Router {
                 .cookie_name("morky.session")
                 .cookie_options(
                     CookieOptions::new()
-                        .secure(constants::is_prod())
+                        .secure_fn(|| {
+                            Settings::get()
+                                .map(|s| s.panel_domain.is_some())
+                                .unwrap_or(false)
+                        })
                         .http_only(true)
                         .same_site(cookie::SameSite::Lax)
                         .path("/"),
