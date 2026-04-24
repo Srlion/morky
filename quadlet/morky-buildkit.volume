@@ -1,5 +1,2 @@
 [Volume]
 VolumeName=morky-buildkit
-
-[Service]
-Environment=CONTAINERS_CONF=/opt/podman/etc/containers/containers.conf
