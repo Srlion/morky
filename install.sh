@@ -76,9 +76,10 @@ install_quadlets() {
     if [[ -d "$QUADLET_SRC" ]]; then
         cp "$QUADLET_SRC"/* "$QUADLET_DIR/"
     else
-        local base="https://raw.githubusercontent.com/$REPO/main/quadlet"
         for f in "${QUADLET_FILES[@]}"; do
-            curl -fsSL "$base/$f" -o "$QUADLET_DIR/$f"
+            curl -fsSL -H "Accept: application/vnd.github.v3.raw" \
+                "https://api.github.com/repos/$REPO/contents/quadlet/$f" \
+                -o "$QUADLET_DIR/$f"
         done
     fi
 }
