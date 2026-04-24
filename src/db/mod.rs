@@ -23,12 +23,12 @@ pub async fn init() -> anyhow::Result<()> {
     let mut conn = Connection::open(path)?;
     conn.set_prepared_statement_cache_capacity(120);
     conn.execute_batch(
-        "PRAGMA journal_mode = WAL;
-        PRAGMA busy_timeout = 5000;
-        PRAGMA synchronous = NORMAL;
-        PRAGMA cache_size = -32000;
+        "PRAGMA journal_mode = DELETE;
+        PRAGMA busy_timeout = 30000;
+        PRAGMA synchronous = FULL;
+        PRAGMA cache_size = -8000;
         PRAGMA foreign_keys = ON;
-        PRAGMA temp_store = MEMORY;",
+        PRAGMA temp_store = FILE;",
     )?;
 
     migrate::migrate(&conn)?;
