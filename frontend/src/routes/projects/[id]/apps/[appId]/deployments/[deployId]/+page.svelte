@@ -1,6 +1,6 @@
 <script>
     import { page } from "$app/state";
-    import { onDestroy } from "svelte";
+    import { onDestroy, untrack } from "svelte";
     import { api } from "$lib/api";
     import { toaster } from "$lib/components/Toasts.svelte";
     import StatusBadge from "$lib/components/StatusBadge.svelte";
@@ -8,9 +8,11 @@
     import { globals } from "$lib/globals.svelte";
 
     const g = globals();
-
     let { data } = $props();
-    let deployment = $state();
+
+    let deployOverride = $state(null);
+    const deployment = $derived(deployOverride ?? data.deployment);
+
     let log = $state("Waiting for logs...");
     let logEl = $state(undefined);
     let ws = null;
@@ -18,13 +20,12 @@
     let wsKey = $state("");
     let copied = $state(false);
 
-    // Container logs
     let containerLines = $state([]);
     let containerTotal = $state(0);
     let containerLoaded = $state(false);
     let containerLoading = $state(false);
+    let containerCopied = $state(false);
 
-    const projectId = $derived(page.params.id);
     const appId = $derived(page.params.appId);
     const deployId = $derived(page.params.deployId);
     const isDone = $derived(
@@ -34,6 +35,10 @@
             ),
     );
     const hasMoreLogs = $derived(containerLines.length < containerTotal);
+    const liveStatus = $derived(
+        g[`deploy_status_${deployment?.id}`] ?? deployment?.status,
+    );
+
     const meta = $derived(
         deployment
             ? [
@@ -51,54 +56,48 @@
             : [],
     );
 
+    // Reset override when navigating to a different deployment
     $effect(() => {
-        deployment = data.deployment;
-        log = data.deployment?.build_log || "Waiting for logs...";
-        // Reset container logs when deployment changes
-        containerLines = [];
-        containerTotal = 0;
-        containerLoaded = false;
+        data.deployment;
+        deployOverride = null;
     });
 
     $effect(() => {
-        const aid = appId;
-        const did = deployId;
-        const key = `${aid}:${did}`;
-        const valid = isValidId(aid) && isValidId(did);
+        if (!deployment?.id || !isValidId(appId) || !isValidId(deployment.id))
+            return;
+        untrack(() => {
+            log = "Waiting for logs...";
+            containerLines = [];
+            containerTotal = 0;
+            containerLoaded = false;
+            loadBuildLog();
+        });
+    });
 
-        if (!valid || isDone) {
+    $effect(() => {
+        const key = `${appId}:${deployId}`;
+        if (!isValidId(appId) || !isValidId(deployId) || isDone) {
             cleanupWs();
             wsKey = "";
             return;
         }
-
         if (wsKey !== key) {
             cleanupWs();
             wsKey = key;
-            connectWs(aid, did, key);
+            connectWs(appId, deployId, key);
         }
     });
 
     onDestroy(cleanupWs);
 
-    function status() {
-        return g[`deploy_status_${deployment?.id}`] ?? deployment?.status;
+    function isValidId(v) {
+        return Number.isInteger(Number(v)) && Number(v) > 0;
     }
 
     function scrollLog() {
-        if (logEl) logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function copyLog() {
-        navigator.clipboard.writeText(log).then(() => {
-            copied = true;
-            setTimeout(() => (copied = false), 2000);
-        });
-    }
-
-    function isValidId(value) {
-        const n = Number(value);
-        return Number.isInteger(n) && n > 0;
+        setTimeout(() => {
+            if (logEl) logEl.scrollTop = logEl.scrollHeight;
+        }, 0);
     }
 
     function cleanupWs() {
@@ -113,44 +112,71 @@
         }
     }
 
-    function connectWs(aid, did, key) {
-        if (!isValidId(aid) || !isValidId(did)) return;
+    async function loadBuildLog() {
+        try {
+            const res = await api.get(
+                `/apps/${appId}/deployments/${deployId}/log`,
+            );
+            log = res.lines?.length
+                ? Array.isArray(res.lines)
+                    ? res.lines.join("\n") + "\n"
+                    : res.lines
+                : isDone
+                  ? "No logs available for this deployment."
+                  : log;
+            scrollLog();
+        } catch {
+            log = "Failed to load logs.";
+        }
+    }
 
+    function connectWs(aid, did, key) {
         const proto = location.protocol === "https:" ? "wss:" : "ws:";
         ws = new WebSocket(
             `${proto}//${location.host}/api/apps/${aid}/deployments/${did}/ws`,
         );
-
         ws.onmessage = (e) => {
             if (wsKey !== key) return;
-
             const msg = JSON.parse(e.data);
             if (msg.t === "bulk") {
-                log = msg.d;
+                log = Array.isArray(msg.d) ? msg.d.join("\n") + "\n" : msg.d;
             } else if (msg.t === "line") {
                 if (log === "Waiting for logs...") log = "";
                 log += msg.d + "\n";
             } else if (msg.t === "status") {
-                api.get(`/apps/${aid}/deployments/${did}`).then(
-                    (d) => (deployment = d),
-                );
+                api.get(`/apps/${aid}/deployments/${did}`).then((d) => {
+                    deployOverride = d;
+                });
             }
-
             scrollLog();
         };
-
         ws.onclose = () => {
-            const stillSameKey =
-                wsKey === key && `${appId}:${deployId}` === key;
-            const idsStillValid = isValidId(appId) && isValidId(deployId);
-
-            if (stillSameKey && idsStillValid && !isDone) {
+            if (wsKey === key && !isDone)
                 reconnectTimer = setTimeout(
                     () => connectWs(aid, did, key),
                     1000,
                 );
-            }
         };
+    }
+
+    function fmtTs(ts) {
+        const d = new Date(ts * 1000);
+        return (
+            d.toLocaleDateString("en-US", {
+                month: "2-digit",
+                day: "2-digit",
+                year: "2-digit",
+            }) +
+            " " +
+            d.toLocaleTimeString("en-US", { hour12: true })
+        );
+    }
+
+    function clipboardCopy(text, setter) {
+        navigator.clipboard.writeText(text).then(() => {
+            setter(true);
+            setTimeout(() => setter(false), 2000);
+        });
     }
 
     async function loadContainerLogs() {
@@ -184,25 +210,6 @@
         }
     }
 
-    let containerCopied = $state(false);
-
-    function copyContainerLog() {
-        const text = containerLines
-            .map(([line, ts]) => {
-                const d = new Date(ts * 1000);
-                return `${d.toLocaleDateString("en-US", {
-                    month: "2-digit",
-                    day: "2-digit",
-                    year: "2-digit",
-                })} ${d.toLocaleTimeString("en-US", { hour12: true })}  ${line}`;
-            })
-            .join("\n");
-        navigator.clipboard.writeText(text).then(() => {
-            containerCopied = true;
-            setTimeout(() => (containerCopied = false), 2000);
-        });
-    }
-
     async function cancel() {
         if (!confirm("Cancel this deployment?")) return;
         try {
@@ -213,11 +220,22 @@
     }
 </script>
 
+{#snippet copyBtn(isCopied, onclick)}
+    <button class="btn btn-xs btn-ghost gap-1" {onclick}>
+        <span
+            class="{isCopied
+                ? 'icon-[lucide--check]'
+                : 'icon-[lucide--copy]'} size-3"
+        ></span>
+        {isCopied ? "Copied" : "Copy"}
+    </button>
+{/snippet}
+
 {#if deployment}
     <div class="flex items-center gap-3 mb-5">
         <h2 class="text-lg font-semibold">Deployment #{deployment.id}</h2>
-        <StatusBadge status={status()} />
-        {#if status() === DeployStatus.BUILDING}
+        <StatusBadge status={liveStatus} />
+        {#if liveStatus === DeployStatus.BUILDING}
             <button class="btn btn-xs btn-error btn-outline" onclick={cancel}>
                 <span class="icon-[lucide--x] size-3"></span> Cancel
             </button>
@@ -231,7 +249,6 @@
     {/if}
 
     <div class="flex flex-col lg:flex-row gap-4">
-        <!-- Metadata sidebar -->
         <div
             class="flex flex-col sm:flex-row lg:flex-col gap-3 lg:w-48 lg:shrink-0"
         >
@@ -257,17 +274,9 @@
             <div>
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold">Build Log</h3>
-                    <button
-                        class="btn btn-xs btn-ghost gap-1"
-                        onclick={copyLog}
-                    >
-                        <span
-                            class="{copied
-                                ? 'icon-[lucide--check]'
-                                : 'icon-[lucide--copy]'} size-3"
-                        ></span>
-                        {copied ? "Copied" : "Copy"}
-                    </button>
+                    {@render copyBtn(copied, () =>
+                        clipboardCopy(log, (v) => (copied = v)),
+                    )}
                 </div>
                 <pre
                     bind:this={logEl}
@@ -295,37 +304,31 @@
                         </button>
                     {:else}
                         <div class="flex items-center gap-2">
-                            <span class="text-[11px] text-base-content/40">
-                                {containerLines.length} / {containerTotal} lines
-                            </span>
-                            <button
-                                class="btn btn-xs btn-ghost gap-1"
-                                onclick={copyContainerLog}
+                            <span class="text-[11px] text-base-content/40"
+                                >{containerLines.length} / {containerTotal} lines</span
                             >
-                                <span
-                                    class="{containerCopied
-                                        ? 'icon-[lucide--check]'
-                                        : 'icon-[lucide--copy]'} size-3"
-                                ></span>
-                                {containerCopied ? "Copied" : "Copy"}
-                            </button>
+                            {@render copyBtn(containerCopied, () =>
+                                clipboardCopy(
+                                    containerLines
+                                        .map(
+                                            ([line, ts]) =>
+                                                `${fmtTs(ts)}  ${line}`,
+                                        )
+                                        .join("\n"),
+                                    (v) => (containerCopied = v),
+                                ),
+                            )}
                         </div>
                     {/if}
                 </div>
 
                 {#if containerLoaded}
                     <pre
-                        class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{#each containerLines as entry}{@const d =
-                                new Date(entry[1] * 1000)}<span
+                        class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{#each containerLines as [line, ts], i}<span
                                 class="text-base-content/30 select-none"
-                                >{d.toLocaleDateString("en-US", {
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                    year: "2-digit",
-                                })} {d.toLocaleTimeString("en-US", {
-                                    hour12: true,
-                                })}  </span>{entry[0]}
-                        {:else}No logs yet.{/each}</pre>
+                                >{fmtTs(
+                                    ts,
+                                )}  </span>{line}{#if i < containerLines.length - 1}{/if}{:else}No logs yet.{/each}</pre>
 
                     {#if hasMoreLogs}
                         <div class="mt-2 text-center">
@@ -338,9 +341,7 @@
                                     <span
                                         class="loading loading-spinner loading-xs"
                                     ></span>
-                                {:else}
-                                    Load more
-                                {/if}
+                                {:else}Load more{/if}
                             </button>
                         </div>
                     {/if}

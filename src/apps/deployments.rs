@@ -157,34 +157,22 @@ async fn cancel_deploy(c: &mut Ctx) {
     c.res.json(&serde_json::json!({"ok": true}));
 }
 
-#[derive(Deserialize)]
-struct LogQuery {
-    #[serde(default)]
-    offset: usize,
-}
-
 async fn get_log(c: &mut Ctx) {
     let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return c
-            .res
-            .json(&serde_json::json!({"log":"","status":"","offset":0}));
+        return c.res.json(&serde_json::json!({"lines":[],"status":""}));
     };
-    let offset = c.req.query::<LogQuery>().map(|q| q.offset).unwrap_or(0);
-    match Deployment::get_by_id(deploy_id).await {
-        Ok(d) => {
-            let full = d.build_log.unwrap_or_default();
-            let chunk = if offset < full.len() {
-                &full[offset..]
-            } else {
-                ""
-            };
-            c.res
-                .json(&serde_json::json!({"log": chunk, "status": d.status, "offset": full.len()}));
-        }
-        _ => c
-            .res
-            .json(&serde_json::json!({"log":"","status":"","offset":0})),
-    }
+    let status = Deployment::get_by_id(deploy_id)
+        .await
+        .map(|d| d.status)
+        .ok();
+    let lines = Deployment::get_log_lines(deploy_id)
+        .await
+        .unwrap_or_default();
+
+    c.res.json(&serde_json::json!({
+        "lines": lines,
+        "status": status,
+    }));
 }
 
 async fn deploy_log_ws(c: &mut Ctx) -> Result<(), StatusError> {
@@ -194,10 +182,9 @@ async fn deploy_log_ws(c: &mut Ctx) -> Result<(), StatusError> {
 
     Ok(c.upgrade_websocket(async move |mut ws| {
         if let Some(ref d) = existing {
-            if let Some(ref log) = d.build_log {
-                if !log.is_empty() {
-                    let _ = ws.send(serde_json::json!({"t":"bulk","d":log}).to_string()).await;
-                }
+            let lines = Deployment::get_log_lines(d.id).await.unwrap_or_default();
+            if !lines.is_empty() {
+                let _ = ws.send(serde_json::json!({"t":"bulk","d":lines}).to_string()).await;
             }
             if matches!(d.status, DeployStatus::Done | DeployStatus::Failed) {
                 let _ = ws.send(serde_json::json!({"t":"status","d":d.status}).to_string()).await;

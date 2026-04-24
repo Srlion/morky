@@ -157,7 +157,13 @@ fi
 
 mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
-run "quadlet files" install_quadlets
+run "create buildkit container" podman create \
+    --name morky-buildkit \
+    --privileged \
+    --network morky-haproxy-net \
+    --volume morky-buildkit.volume:/var/lib/buildkit \
+    moby/buildkit:v0.29.0 \
+    --addr tcp://0.0.0.0:1234
 
 # patch quadlet to use the GHCR image + tag (production only)
 if [[ ! -d "$QUADLET_SRC" ]]; then

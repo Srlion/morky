@@ -19,7 +19,6 @@ pub struct Deployment {
     pub build_method: String,
     pub dockerfile_path: Option<String>,
     pub status: DeployStatus,
-    pub build_log: Option<String>,
     pub error: Option<String>,
     pub created_at: DateTime<Utc>,
     pub finished_at: Option<DateTime<Utc>>,
@@ -46,7 +45,6 @@ impl db::FromRow for Deployment {
             build_method: row.get("build_method")?,
             dockerfile_path: row.get("dockerfile_path")?,
             status: row.get("status")?,
-            build_log: row.get("build_log")?,
             error: row.get("error")?,
             created_at: row.get("created_at")?,
             finished_at: row.get("finished_at")?,
@@ -111,26 +109,20 @@ impl Deployment {
         commit_sha: &str,
         commit_message: &str,
     ) -> db::Result<()> {
-        conn()
-            .query(
-                "UPDATE deployments SET status = 'building', commit_sha = ?, commit_message = ? WHERE id = ?",
-            )
-            .bind(commit_sha)
-            .bind(commit_message)
-            .bind(id)
-            .execute()
-            .await?;
+        conn().query("UPDATE deployments SET status = 'building', commit_sha = ?, commit_message = ? WHERE id = ?",).bind(commit_sha).bind(commit_message).bind(id).execute().await?;
         Ok(())
     }
 
     pub async fn finish(id: i64, status: DeployStatus, error: Option<&str>) -> db::Result<()> {
+        conn().query("UPDATE deployments SET status = ?, error = ?, finished_at = unixepoch() WHERE id = ?",).bind(status).bind(error).bind(id).execute().await?;
+        Ok(())
+    }
+
+    pub async fn append_log(id: i64, line: &str) -> db::Result<()> {
         conn()
-            .query(
-                "UPDATE deployments SET status = ?, error = ?, finished_at = unixepoch() WHERE id = ?",
-            )
-            .bind(status)
-            .bind(error)
+            .query("INSERT INTO build_log_lines (deployment_id, line) VALUES (?, ?)")
             .bind(id)
+            .bind(line)
             .execute()
             .await?;
         Ok(())
@@ -138,21 +130,19 @@ impl Deployment {
 
     pub async fn clear_log(id: i64) -> db::Result<()> {
         conn()
-            .query("UPDATE deployments SET build_log = '' WHERE id = ?")
+            .query("DELETE FROM build_log_lines WHERE deployment_id = ?")
             .bind(id)
             .execute()
             .await?;
         Ok(())
     }
 
-    pub async fn append_log(id: i64, line: &str) -> db::Result<()> {
+    pub async fn get_log_lines(id: i64) -> db::Result<Vec<String>> {
         conn()
-            .query("UPDATE deployments SET build_log = COALESCE(build_log, '') || ? WHERE id = ?")
-            .bind(format!("{line}\n"))
+            .query_as("SELECT line FROM build_log_lines WHERE deployment_id = ? ORDER BY id ASC")
             .bind(id)
-            .execute()
-            .await?;
-        Ok(())
+            .fetch_all()
+            .await
     }
 
     pub async fn app(&self) -> db::Result<App> {

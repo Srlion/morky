@@ -2,16 +2,15 @@ use std::sync::LazyLock;
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use tokio::process::{Child, Command};
+use tokio::process::Command;
 use tokio::sync::Mutex;
 
-pub const ADDR: &str = "unix:///tmp/buildkitd.sock";
+pub const ADDR: &str = "tcp://morky-buildkit:1234";
 const IDLE_TIMEOUT: Duration = Duration::from_secs(10);
 
 static ACTIVE: AtomicU64 = AtomicU64::new(0);
 static LAST_USED: AtomicU64 = AtomicU64::new(0);
 static LOCK: LazyLock<Mutex<()>> = LazyLock::new(Default::default);
-static CHILD: LazyLock<Mutex<Option<Child>>> = LazyLock::new(Default::default);
 
 fn now_secs() -> u64 {
     SystemTime::now()
@@ -56,12 +55,13 @@ async fn is_ready() -> bool {
 }
 
 async fn kill() {
-    let mut child = CHILD.lock().await;
-    if let Some(ref mut c) = *child {
-        let _ = c.kill().await;
-        let _ = c.wait().await;
-    }
-    *child = None;
+    crate::common::podman()
+        .args(["stop", "morky-buildkit"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await
+        .ok();
 }
 
 async fn start() -> anyhow::Result<()> {
@@ -69,15 +69,17 @@ async fn start() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    let child = Command::new("buildkitd")
-        .args(["--addr", ADDR, "--oci-worker-binary", "/usr/local/bin/runc"])
-        .stdin(std::process::Stdio::null())
+    let status = crate::common::podman()
+        .args(["start", "morky-buildkit"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
-        .spawn()
-        .map_err(|e| anyhow::anyhow!("failed to spawn buildkitd: {e}"))?;
+        .status()
+        .await
+        .map_err(|e| anyhow::anyhow!("failed to start buildkit container: {e}"))?;
 
-    *CHILD.lock().await = Some(child);
+    if !status.success() {
+        anyhow::bail!("podman start morky-buildkit failed");
+    }
 
     for _ in 0..100 {
         tokio::time::sleep(Duration::from_millis(100)).await;
@@ -86,7 +88,7 @@ async fn start() -> anyhow::Result<()> {
         }
     }
 
-    kill().await;
+    let _ = kill().await;
     anyhow::bail!("buildkitd started but never became ready within 10s")
 }
 

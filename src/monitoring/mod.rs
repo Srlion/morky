@@ -46,10 +46,9 @@ pub fn start_sampler() {
 }
 
 async fn system_sampler() {
-    use sysinfo::{Disks, System};
+    use sysinfo::System;
 
     let mut sys = System::new_all();
-    let mut disks = Disks::new_with_refreshed_list();
 
     tokio::time::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL).await;
     sys.refresh_cpu_usage();
@@ -59,7 +58,6 @@ async fn system_sampler() {
     loop {
         sys.refresh_cpu_usage();
         sys.refresh_memory();
-        disks.refresh(true);
 
         let cpu = sys.global_cpu_usage() as f64;
         let mem_total = sys.total_memory();
@@ -70,17 +68,20 @@ async fn system_sampler() {
             0.0
         };
 
-        let (dt, du) = disks
-            .iter()
-            .find(|d| d.mount_point() == std::path::Path::new("/"))
-            .map(|d| (d.total_space(), d.total_space() - d.available_space()))
-            .unwrap_or((0, 0));
-        let gib = 1_073_741_824.0; // 1024³
+        let (dt, du) = match nix::sys::statvfs::statvfs("/") {
+            Ok(stat) => {
+                let total = stat.blocks() as u64 * stat.fragment_size() as u64;
+                let avail = stat.blocks_available() as u64 * stat.fragment_size() as u64;
+                (total, total - avail)
+            }
+            Err(_) => (0, 0),
+        };
+        let gib = 1_073_741_824.0;
 
         let s = SystemStats {
             cpu_percent: r1(cpu),
-            mem_total_mb: (mem_total / 1_048_576) as u64, // MiB
-            mem_used_mb: (mem_used / 1_048_576) as u64,   // MiB
+            mem_total_mb: (mem_total / 1_048_576) as u64,
+            mem_used_mb: (mem_used / 1_048_576) as u64,
             mem_percent: r1(mem_pct),
             disk_total_gb: r2(dt as f64 / gib),
             disk_used_gb: r2(du as f64 / gib),
@@ -95,7 +96,7 @@ async fn system_sampler() {
         let mut h = HISTORY.lock().await;
         h.push_back(s);
         if h.len() > MAX_HISTORY {
-            h.remove(0);
+            h.pop_front();
         }
         drop(h);
 
@@ -122,6 +123,14 @@ struct ContainerStats {
     mem_percent: String,
 }
 
+#[derive(serde::Deserialize)]
+struct RawPodmanStats {
+    name: String,
+    cpu_percent: String,
+    mem_usage: String,
+    mem_percent: String,
+}
+
 async fn container_sampler() {
     use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -142,9 +151,8 @@ async fn container_sampler() {
 
         let stdout = child.stdout.take().unwrap();
         let mut lines = BufReader::new(stdout).lines();
-        let mut buf = String::new();
+        let mut buf = String::with_capacity(8192);
 
-        // Stream continuously - podman stats keeps emitting JSON arrays
         while let Ok(Some(line)) = lines.next_line().await {
             buf.push_str(&line);
             buf.push('\n');
@@ -153,7 +161,7 @@ async fn container_sampler() {
                 continue;
             }
             if line.trim() == "]" {
-                if let Ok(arr) = serde_json::from_str::<Vec<serde_json::Value>>(&buf) {
+                if let Ok(arr) = serde_json::from_str::<Vec<RawPodmanStats>>(&buf) {
                     let parsed = parse_container_stats(arr).await;
                     *CONTAINER_STATS.lock().await = parsed.into();
                 }
@@ -172,25 +180,24 @@ async fn read_container_stats() -> Arc<[ContainerStats]> {
     CONTAINER_STATS.lock().await.clone()
 }
 
-async fn parse_container_stats(arr: Vec<serde_json::Value>) -> Vec<ContainerStats> {
+async fn parse_container_stats(arr: Vec<RawPodmanStats>) -> Vec<ContainerStats> {
     let app_names = crate::models::App::name_map().await.unwrap_or_default();
     let num_cores = num_cpus::get() as f64;
 
     arr.into_iter()
         .map(|v| {
-            let s = |k: &str| v[k].as_str().unwrap_or("").to_string();
-            let name = s("name");
-            let mem_usage = s("mem_usage");
-            let mem_used = mem_usage.split('/').next().unwrap_or("").trim().to_string();
+            let mem_used = v
+                .mem_usage
+                .split('/')
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string();
+            let raw_cpu: f64 = v.cpu_percent.trim_end_matches('%').parse().unwrap_or(0.0);
 
-            // Normalize: podman reports per-system CPU, divide by cores
-            let raw_cpu: f64 = s("cpu_percent")
-                .trim_end_matches('%')
-                .parse()
-                .unwrap_or(0.0);
             let cpu = format!("{:.1}%", raw_cpu / num_cores);
-
-            let (app_id, app_name, project_id, project_name) = name
+            let (app_id, app_name, project_id, project_name) = v
+                .name
                 .strip_prefix("app-")
                 .and_then(|id_str| id_str.parse::<i64>().ok())
                 .and_then(|id| {
@@ -201,14 +208,14 @@ async fn parse_container_stats(arr: Vec<serde_json::Value>) -> Vec<ContainerStat
                 .unwrap_or((None, None, None, None));
 
             ContainerStats {
-                name,
+                name: v.name,
                 app_id,
                 app_name,
                 project_id,
                 project_name,
                 cpu,
                 mem_used,
-                mem_percent: s("mem_percent"),
+                mem_percent: v.mem_percent,
             }
         })
         .collect()

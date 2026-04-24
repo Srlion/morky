@@ -37,9 +37,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         | tar xz -C /tmp \
     && mv /tmp/bin/podman-remote-static-linux_amd64 /usr/local/bin/podman \
     && chmod +x /usr/local/bin/podman \
-    && curl -fsSL https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}/buildkit-${BUILDKIT_VERSION}.linux-amd64.tar.gz \
-        | tar xz -C /tmp \
-    && cp /tmp/bin/buildkitd /tmp/bin/buildctl /usr/local/bin/ \
+    && cp /tmp/bin/buildctl /usr/local/bin/ \
     && curl -fsSL https://railpack.com/install.sh | bash -s -- --bin-dir /usr/local/bin --yes \
     && rm -rf /tmp/* /var/lib/apt/lists/*
 
