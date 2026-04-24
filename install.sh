@@ -159,6 +159,7 @@ mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
 run "create buildkit container" podman create \
     --name morky-buildkit \
+    --replace \
     --privileged \
     --network morky-haproxy-net \
     --volume morky-buildkit.volume:/var/lib/buildkit \
