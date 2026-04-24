@@ -136,8 +136,7 @@ else
 fi
 
 if [[ "$HAS_SUDO" == true ]]; then
-    run "podman" bash -c \
-        'curl -fsSL https://github.com/srlion/podman-static/raw/main/install.sh -o /tmp/install.sh && bash /tmp/install.sh'
+    run "podman" bash -c 'curl -fsSL https://github.com/srlion/podman-static/raw/main/install.sh | bash'
 
     run "unprivileged port 80" bash -c "
     echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-morky.conf >/dev/null
