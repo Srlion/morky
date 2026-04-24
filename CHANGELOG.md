@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.2.0](https://github.com/Srlion/morky/compare/v0.1.0...v0.2.0) (2026-04-24)
+
+
+### Features
+
+* support restoring from backup via --restore flag ([0ad4cb9](https://github.com/Srlion/morky/commit/0ad4cb9d24fdafbbd5c7f09bc92a99026c4836a8))
+
+
+### Bug Fixes
+
+* add settings tabs and password change functionality ([35c6e40](https://github.com/Srlion/morky/commit/35c6e40f118ddf6bf15c30e83b55bb9f0295501a))
+* add version.txt to backup tar archive ([bac7417](https://github.com/Srlion/morky/commit/bac74178a9ff12c352517961dc7506143580b7a2))
+* get rid of old_build.rs ([dc25d16](https://github.com/Srlion/morky/commit/dc25d16140cff766573e840ad4f569762aac182e))
+* remove frontend watcher ([9a4ffcb](https://github.com/Srlion/morky/commit/9a4ffcb2e1b982650ec2db41f5cad1fde5b28dba))
+* update monitoring to use VecDeque for efficient history management ([dd0b1c1](https://github.com/Srlion/morky/commit/dd0b1c1cb61a8983cc235080374ff1da6fd011cd))
+* update SQLite pragmas for max durability ([95699fb](https://github.com/Srlion/morky/commit/95699fb620dfa109d64ac7761553704715f3d808))
+
+
+### Miscellaneous Chores
+
+* release 0.2.0 ([e01e8da](https://github.com/Srlion/morky/commit/e01e8da1921a502231485d844181fd209fb95527))
+* set version to 0.1.0 ([8195086](https://github.com/Srlion/morky/commit/8195086e18718c002ff00ec6fc50e2f0ec17aa9d))
+* set version to 0.1.0 oops ([39a9076](https://github.com/Srlion/morky/commit/39a90767a2b0dd8eb9e91d47c4aed51db160590f))
+
 ## 0.1.0 (2026-04-24)
 
 
