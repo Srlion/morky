@@ -1,3 +1,5 @@
+use std::sync::{LazyLock, Mutex};
+
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 
@@ -5,6 +7,8 @@ use crate::{
     db::{self, FromRow, Row, conn},
     hook::{self, Event},
 };
+
+static CACHE: LazyLock<Mutex<Option<Settings>>> = LazyLock::new(|| Mutex::new(None));
 
 #[derive(Debug, Clone, Serialize)]
 pub struct Settings {
@@ -22,11 +26,20 @@ impl FromRow for Settings {
 }
 
 impl Settings {
-    pub async fn get() -> db::Result<Self> {
-        conn()
-            .query_as("SELECT panel_domain, updated_at FROM settings WHERE id = 1")
+    pub fn get() -> db::Result<Self> {
+        if let Some(cached) = CACHE.lock().unwrap().clone() {
+            return Ok(cached);
+        }
+        crate::tokio_handle().block_on(Self::fetch())
+    }
+
+    async fn fetch() -> db::Result<Self> {
+        let settings: Settings = conn()
+            .query_as("SELECT * FROM settings WHERE id = 1")
             .fetch_one()
-            .await
+            .await?;
+        *CACHE.lock().unwrap() = Some(settings.clone());
+        Ok(settings)
     }
 
     pub async fn set_panel_domain(domain: Option<String>) -> db::Result<Self> {
@@ -35,7 +48,7 @@ impl Settings {
             .bind(domain)
             .execute()
             .await?;
-        let settings = Self::get().await;
+        let settings = Self::fetch().await;
         if let Ok(settings) = &settings {
             SettingsEvent::updated(settings.clone());
         }

@@ -14,7 +14,7 @@ pub fn routes() -> Router {
 }
 
 async fn get(c: &mut Ctx) {
-    match Settings::get().await {
+    match Settings::get() {
         Ok(settings) => c.res.json(&settings),
         Err(e) => c
             .res

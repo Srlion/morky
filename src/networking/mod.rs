@@ -134,7 +134,7 @@ async fn load_routes() -> Vec<Route> {
         });
     }
 
-    if let Ok(settings) = Settings::get().await {
+    if let Ok(settings) = Settings::get() {
         if let Some(d) = settings
             .panel_domain
             .as_deref()

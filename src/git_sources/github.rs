@@ -58,7 +58,7 @@ async fn gh_ok(resp: reqwest::Response) -> Result<Value, String> {
 }
 
 async fn current_base_url() -> Result<String, &'static str> {
-    match Settings::get().await.ok().and_then(|s| s.panel_domain) {
+    match Settings::get().ok().and_then(|s| s.panel_domain) {
         Some(d) => Ok(format!("https://{d}")),
         None => common::public_base_url().await.map_err(
             |_| "could not determine host: no domain configured and failed to get public IP",
