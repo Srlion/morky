@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0](https://github.com/Srlion/morky/compare/v0.3.1...v0.4.0) (2026-04-24)
+
+
+### Features
+
+* add mimalloc as global allocator ([a693f3b](https://github.com/Srlion/morky/commit/a693f3bf875a5e25d48770bbf4ae38baa09d1403))
+
+
+### Bug Fixes
+
+* try to lower memory usage ([47b857d](https://github.com/Srlion/morky/commit/47b857deb6e1a67e4f250a4224827881e77cbcb9))
+* try to lower memory usage ([2fc930f](https://github.com/Srlion/morky/commit/2fc930ffeb8270615269b17fb6c9cfac19af6a1d))
+
 ## [0.3.1](https://github.com/Srlion/morky/compare/v0.3.0...v0.3.1) (2026-04-24)
 
 
