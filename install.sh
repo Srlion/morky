@@ -131,6 +131,7 @@ if [[ -z "$TAG" ]]; then
         TAG="dev"
     else
         TAG=$(get_latest_tag)
+        TAG="${TAG#v}"
     fi
 fi
 
