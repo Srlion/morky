@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Srlion/morky/compare/v0.3.0...v0.3.1) (2026-04-24)
+
+
+### Bug Fixes
+
+* fix first time install ([d81890a](https://github.com/Srlion/morky/commit/d81890ae9eea774f50245a90b372d8ae254ba44b))
+
 ## [0.3.0](https://github.com/Srlion/morky/compare/v0.2.0...v0.3.0) (2026-04-24)
 
 
