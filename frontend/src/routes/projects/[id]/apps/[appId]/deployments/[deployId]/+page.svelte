@@ -328,7 +328,7 @@
                                 class="text-base-content/30 select-none"
                                 >{fmtTs(
                                     ts,
-                                )}  </span>{line}{#if i < containerLines.length - 1}{/if}{:else}No logs yet.{/each}</pre>
+                                )}  </span>{line}{#if i < containerLines.length - 1}{"\n"}{/if}{:else}No logs yet.{/each}</pre>
 
                     {#if hasMoreLogs}
                         <div class="mt-2 text-center">
