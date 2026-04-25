@@ -202,15 +202,13 @@ async fn save_settings(c: &mut Ctx) {
         _ => {}
     }
 
-    let volume_path = if method == "railpack" {
-        body.volume_path
-            .as_deref()
-            .map(str::trim)
-            .unwrap_or("/data")
-            .to_string()
-    } else {
-        String::new() // ignored for dockerfile builds
-    };
+    let volume_path = body
+        .volume_path
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("")
+        .to_string();
 
     match App::update(app_id)
         .branch(body.branch.trim())
