@@ -197,19 +197,17 @@
                 </span>
             </label>
 
-            {#if buildMethod === "railpack"}
-                <label class="flex flex-col gap-1">
-                    <span class="label">Volume Path</span>
-                    <input
-                        class="input input-bordered w-full"
-                        bind:value={volumePath}
-                        placeholder="/data"
-                    />
-                    <span class="text-[11px] text-base-content/40">
-                        Leave empty to disable persistent storage.
-                    </span>
-                </label>
-            {/if}
+            <label class="flex flex-col gap-1">
+                <span class="label">Volume Path</span>
+                <input
+                    class="input input-bordered w-full"
+                    bind:value={volumePath}
+                    placeholder="/data"
+                />
+                <span class="text-[11px] text-base-content/40">
+                    Leave empty to disable persistent storage.
+                </span>
+            </label>
         </div>
 
         <div class="flex justify-end mt-5">
