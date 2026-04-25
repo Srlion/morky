@@ -7,7 +7,7 @@ on:
 
 env:
     REGISTRY: ghcr.io
-    IMAGE_NAME: ${{ github.repository }} # srlion/morky
+    IMAGE_NAME: ${{ github.repository }}
 
 jobs:
     build-and-push:
@@ -53,7 +53,5 @@ jobs:
                   push: true
                   tags: ${{ steps.meta.outputs.tags }}
                   labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
                   build-args: |
                       CARGO_PROFILE=release
