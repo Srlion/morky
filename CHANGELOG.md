@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/Srlion/morky/compare/v0.6.2...v0.6.3) (2026-04-25)
+
+
+### Bug Fixes
+
+* add ansi-to-html dependency and render logs with ANSI color codes ([2d4eb48](https://github.com/Srlion/morky/commit/2d4eb48a57a2f3e5120e51c3cc5eb217774b58ba))
+
 ## [0.6.2](https://github.com/Srlion/morky/compare/v0.6.1...v0.6.2) (2026-04-25)
 
 
