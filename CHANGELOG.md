@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.5.0](https://github.com/Srlion/morky/compare/v0.4.0...v0.5.0) (2026-04-25)
+
+
+### Features
+
+* add "Volume" tab in app page ([aa01d10](https://github.com/Srlion/morky/commit/aa01d10290dfc8e7c9c2e54702033bc8aace5950))
+* add TtlMap implementation for time-based cache expiration ([fff0a05](https://github.com/Srlion/morky/commit/fff0a05fe584821d57519ff8f499750a75baaf8e))
+
+
+### Bug Fixes
+
+* cleanup marker only when successful ([92b7168](https://github.com/Srlion/morky/commit/92b7168b9f488776357252e4ec205d324a1cd442))
+* fix install script to replace existing buildkit container ([5fd093d](https://github.com/Srlion/morky/commit/5fd093df5342b19662d18e59fb18d72f60954fb3))
+* replace global state with TtlMap ([0f60653](https://github.com/Srlion/morky/commit/0f60653f4084787a8d7989fd70061cf61b3ca8fe))
+
 ## [0.4.0](https://github.com/Srlion/morky/compare/v0.3.1...v0.4.0) (2026-04-24)
 
 
