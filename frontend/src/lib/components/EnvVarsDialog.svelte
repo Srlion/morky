@@ -41,23 +41,11 @@
     const previewId = "envvars-preview";
 
     let el = $state();
-    let parsed = $state(/** @type {Record<string, string>} */ ({}));
-    let parsedProject = $state(/** @type {Record<string, string>} */ ({}));
 
-    $effect(() => {
-        parsed = parse(envDialog.envVars || "");
-    });
+    const parsed = $derived(parse(envDialog.envVars || ""));
+    const parsedProject = $derived(parse(envDialog.projectEnvVars || ""));
 
-    $effect(() => {
-        parsedProject = parse(envDialog.projectEnvVars || "");
-    });
-
-    $effect(() => {
-        if (envDialog.open) el?.showModal();
-        else el?.close();
-    });
-
-    let merged = $derived(() => {
+    const merged = $derived.by(() => {
         const entries = [];
         const appKeys = new Set(Object.keys(parsed));
 
@@ -78,11 +66,10 @@
         return entries;
     });
 
-    function onInput(event) {
-        const value = event.target.value;
-        envDialog.envVars = value;
-        parsed = parse(value || "");
-    }
+    $effect(() => {
+        if (envDialog.open) el?.showModal();
+        else el?.close();
+    });
 
     async function save() {
         try {
@@ -103,29 +90,27 @@
             One per line: <kbd class="kbd kbd-xs">KEY=VALUE</kbd>
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="flex flex-col">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 h-[50vh]">
+            <div class="flex flex-col min-h-0">
                 <label class="text-xs font-semibold mb-1" for={inputId}
                     >Input</label
                 >
                 <textarea
                     id={inputId}
-                    class="textarea textarea-bordered w-full font-mono text-xs"
-                    rows="12"
-                    value={envDialog.envVars}
-                    oninput={onInput}
+                    class="textarea textarea-bordered w-full flex-1 min-h-0 font-mono text-xs resize-none"
+                    bind:value={envDialog.envVars}
                     placeholder="DATABASE_URL=..."
                 ></textarea>
             </div>
 
-            <div class="flex flex-col">
+            <div class="flex flex-col min-h-0">
                 <div class="flex items-center justify-between mb-1">
                     <label class="text-xs font-semibold" for={previewId}
                         >Preview</label
                     >
-                    {#if merged().length > 0}
+                    {#if merged.length > 0}
                         <span class="badge badge-ghost badge-xs"
-                            >{merged().length} var{merged().length === 1
+                            >{merged.length} var{merged.length === 1
                                 ? ""
                                 : "s"}</span
                         >
@@ -133,24 +118,23 @@
                 </div>
                 <div
                     id={previewId}
-                    class="border border-base-300 rounded-lg w-full h-full overflow-auto bg-base-200/40"
-                    style="min-height: 12lh"
+                    class="border border-base-300 rounded-lg w-full flex-1 overflow-auto bg-base-200/40"
                 >
-                    {#if merged().length === 0}
+                    {#if merged.length === 0}
                         <div
-                            class="flex items-center justify-center h-full text-base-content/30 text-xs italic py-12"
+                            class="flex items-center justify-center h-full text-base-content/30 text-xs italic"
                         >
                             Paste env vars on the left to preview
                         </div>
                     {:else}
                         <ul class="flex flex-col gap-px">
-                            {#each merged() as { key, value, source }, i}
+                            {#each merged as { key, value, source }, i}
                                 <li
-                                    class="
-                    flex items-baseline gap-3 px-3 py-2 {i % 2 === 0
+                                    class="flex items-baseline gap-3 px-3 py-2 {i %
+                                        2 ===
+                                    0
                                         ? 'bg-base-100/60'
-                                        : ''}
-                  "
+                                        : ''}"
                                 >
                                     <code
                                         class="shrink-0 px-2 py-px rounded bg-primary/10 text-primary text-xs font-bold select-all"
@@ -192,9 +176,7 @@
             <button class="btn btn-sm" onclick={() => envDialog.close()}>
                 Cancel
             </button>
-            <button class="btn btn-sm btn-primary" onclick={save}>
-                Save
-            </button>
+            <button class="btn btn-sm btn-primary" onclick={save}>Save</button>
         </div>
     </div>
     <form method="dialog" class="modal-backdrop"><button>close</button></form>
