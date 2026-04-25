@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/Srlion/morky/compare/v0.6.3...v0.7.0) (2026-04-25)
+
+
+### Features
+
+* limit buildkit cpu usage ([f7b21b1](https://github.com/Srlion/morky/commit/f7b21b13b78cf18bcd132c2eabe3c229c08a087c))
+
+
+### Bug Fixes
+
+* fix env vars dialog looking terrible ([36869fb](https://github.com/Srlion/morky/commit/36869fb191c6f5a918880d65af699638a53649e1))
+
 ## [0.6.3](https://github.com/Srlion/morky/compare/v0.6.2...v0.6.3) (2026-04-25)
 
 
