@@ -28,6 +28,14 @@ impl Drop for Guard {
     }
 }
 
+/// Returns how many CPUs to allow buildkitd to use.
+/// Half of available CPUs, minimum 1:
+///   2 CPUs -> 1,  3 -> 1,  4 -> 2,  8 -> 4, etc.
+pub fn cpu_limit() -> usize {
+    let total = num_cpus::get();
+    (total / 2).max(1)
+}
+
 pub async fn ensure_running() -> anyhow::Result<Guard> {
     let _lock = LOCK.lock().await;
     ACTIVE.fetch_add(1, Relaxed);
@@ -69,8 +77,35 @@ async fn start() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Remove stale container if any
+    crate::common::podman()
+        .args(["rm", "-f", "morky-buildkit"])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .await
+        .ok();
+
+    let cpus = cpu_limit().to_string();
     let status = crate::common::podman()
-        .args(["start", "morky-buildkit"])
+        .args([
+            "run",
+            "-d",
+            "--name",
+            "morky-buildkit",
+            "--privileged",
+            "--cpus",
+            &cpus,
+            "--network",
+            "morky-haproxy-net",
+            "--volume",
+            "morky-buildkit.volume:/var/lib/buildkit",
+            "moby/buildkit:v0.29.0",
+            "--addr",
+            "tcp://0.0.0.0:1234",
+            "--oci-max-parallelism",
+            &cpus,
+        ])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
@@ -78,7 +113,7 @@ async fn start() -> anyhow::Result<()> {
         .map_err(|e| anyhow::anyhow!("failed to start buildkit container: {e}"))?;
 
     if !status.success() {
-        anyhow::bail!("podman start morky-buildkit failed");
+        anyhow::bail!("podman run morky-buildkit failed");
     }
 
     for _ in 0..100 {

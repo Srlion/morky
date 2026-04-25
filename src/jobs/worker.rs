@@ -4,7 +4,8 @@ use std::time::Duration;
 
 use tokio::sync::{Notify, Semaphore};
 
-use crate::{db::conn, jobs::cpu_limit};
+use crate::db::conn;
+use crate::deploy::buildkit::cpu_limit;
 
 use super::{JobRow, get_def};
 

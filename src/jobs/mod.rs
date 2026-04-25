@@ -47,14 +47,6 @@ struct JobDef {
 
 static REGISTRY: LazyLock<Mutex<HashMap<&str, Arc<JobDef>>>> = LazyLock::new(Default::default);
 
-/// Returns how many CPUs to allow buildkitd to use.
-/// Half of available CPUs, minimum 1:
-///   2 CPUs -> 1,  3 -> 1,  4 -> 2,  8 -> 4, etc.
-pub fn cpu_limit() -> usize {
-    let total = num_cpus::get();
-    (total / 2).max(1)
-}
-
 /// Register a job type. Call once per type at startup before `start()`.
 pub fn register<J: Job>() {
     let def = JobDef {
