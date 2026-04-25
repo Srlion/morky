@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/Srlion/morky/compare/v0.5.1...v0.6.0) (2026-04-25)
+
+
+### Features
+
+* add drag and drop file upload and folder creation ([6771e83](https://github.com/Srlion/morky/commit/6771e8329675b4152a2d9ffdddf49f331a282998))
+
+
+### Bug Fixes
+
+* make drag n drop work inside app volume too ([f931eb4](https://github.com/Srlion/morky/commit/f931eb47a0c89cdb3b45cbe942a84056c7bb58e5))
+
 ## [0.5.1](https://github.com/Srlion/morky/compare/v0.5.0...v0.5.1) (2026-04-25)
 
 
