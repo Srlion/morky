@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/Srlion/morky/compare/v0.6.0...v0.6.1) (2026-04-25)
+
+
+### Bug Fixes
+
+* remove conditional volume path input for Railpack builds ([3fd0910](https://github.com/Srlion/morky/commit/3fd09107b660fdc97375724aa45ea08d63bd9cac))
+
 ## [0.6.0](https://github.com/Srlion/morky/compare/v0.5.1...v0.6.0) (2026-04-25)
 
 
