@@ -126,7 +126,9 @@ pub async fn run_cleanup(req: CleanupRequest) -> CleanupResult {
         }
     }
 
-    let _ = CleanupSettings::mark_cleaned().await;
+    if errors.is_empty() {
+        let _ = CleanupSettings::mark_cleaned().await;
+    }
 
     let target_names = targets.iter().map(|s| s.to_string()).collect();
 
