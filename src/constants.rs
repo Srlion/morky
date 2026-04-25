@@ -1,7 +1,3 @@
-pub fn db_path() -> String {
-    std::env::var("DB_PATH").expect("DB_PATH is required")
-}
-
 pub fn cookie_secret_key() -> String {
     static KEY: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
         let path = std::path::Path::new(&db_path())
@@ -18,17 +14,35 @@ pub fn cookie_secret_key() -> String {
     KEY.clone()
 }
 
-pub fn rust_log() -> String {
-    std::env::var("RUST_LOG").unwrap_or_else(|_| "info".to_string())
-}
-
-pub fn host() -> String {
-    std::env::var("APP_HOST").unwrap_or_else(|_| "0.0.0.0".to_string())
-}
-
 pub fn port() -> u16 {
     std::env::var("PORT")
         .unwrap_or_else(|_| "9764".to_string())
         .parse()
         .unwrap()
 }
+
+macro_rules! env_var {
+    ($name:ident, $key:literal) => {
+        pub fn $name() -> &'static str {
+            static V: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+                std::env::var($key).expect(concat!($key, " is required"))
+            });
+            &V
+        }
+    };
+    ($name:ident, $key:literal, $default:literal) => {
+        pub fn $name() -> &'static str {
+            static V: std::sync::LazyLock<String> = std::sync::LazyLock::new(|| {
+                std::env::var($key).unwrap_or_else(|_| $default.into())
+            });
+            &V
+        }
+    };
+}
+
+env_var!(db_path, "DB_PATH");
+env_var!(rust_log, "RUST_LOG", "info");
+env_var!(host, "APP_HOST", "0.0.0.0");
+env_var!(podman_socket, "PODMAN_SOCKET");
+env_var!(morky_host_data_dir, "MORKY_HOST_DATA_DIR");
+env_var!(morky_data_dir, "MORKY_DATA_DIR");

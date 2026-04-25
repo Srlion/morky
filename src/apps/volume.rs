@@ -3,7 +3,10 @@ use std::path::{Path, PathBuf};
 use maw::prelude::*;
 use tokio::io::AsyncReadExt;
 
-use crate::models::{App, AppStatus};
+use crate::{
+    constants,
+    models::{App, AppStatus},
+};
 
 pub fn routes() -> Router {
     Router::group("/volume")
@@ -15,28 +18,12 @@ pub fn routes() -> Router {
 }
 
 async fn volume_root(app_id: i64) -> Option<PathBuf> {
-    let vol_name = format!("app-{app_id}-data");
-    let out = crate::common::podman()
-        .args([
-            "volume",
-            "inspect",
-            "--format",
-            "{{.Mountpoint}}",
-            &vol_name,
-        ])
-        .output()
-        .await
-        .ok()?;
-    if !out.status.success() {
-        return None;
+    let data_dir = constants::morky_data_dir();
+    let path = PathBuf::from(format!("{data_dir}/volumes/app-{app_id}"));
+    if !path.exists() {
+        tokio::fs::create_dir_all(&path).await.ok()?;
     }
-    let path = String::from_utf8(out.stdout).ok()?;
-    let path = path.trim();
-    if path.is_empty() {
-        return None;
-    }
-    let p = PathBuf::from(path);
-    Some(p.canonicalize().unwrap_or(p))
+    Some(path)
 }
 
 fn safe_join(root: &Path, rel: &str) -> Result<PathBuf, &'static str> {

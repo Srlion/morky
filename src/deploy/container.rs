@@ -8,7 +8,7 @@ use crate::common::podman;
 use crate::deploy::env::{EnvMode, inject_env};
 use crate::deploy::shell::run_logged;
 use crate::models::{App, Deployment};
-use crate::networking;
+use crate::{constants, networking};
 
 static TAILERS: LazyLock<Mutex<HashMap<i64, tokio::task::AbortHandle>>> =
     LazyLock::new(Default::default);
@@ -54,8 +54,11 @@ pub async fn start(deployment: &Deployment, log_to: Option<i64>) -> Result<(), S
 
     let volume_path = &deployment.volume_path;
     if !volume_path.is_empty() {
-        let vol_name = format!("app-{app_id}-data");
-        args.extend(["-v".into(), format!("{vol_name}:{volume_path}")]);
+        let host_dir = format!("{}/volumes/app-{app_id}", constants::morky_host_data_dir());
+        // ensure it exists on the host
+        let container_dir = format!("{}/volumes/app-{app_id}", constants::morky_data_dir());
+        let _ = tokio::fs::create_dir_all(&container_dir).await;
+        args.extend(["-v".into(), format!("{host_dir}:{volume_path}")]);
     }
 
     args.extend(inject_env(&deployment.env_vars, EnvMode::Runtime));

@@ -4,6 +4,7 @@ use std::sync::OnceLock;
 
 use super::routes::Route;
 use crate::common::{atomic_write, podman};
+use crate::constants;
 
 pub const HAPROXY_CONTAINER: &str = "morky-haproxy";
 pub const HAPROXY_NET: &str = "morky-haproxy-net";
@@ -46,17 +47,7 @@ backend no_match
 
 fn base_dir() -> &'static Path {
     static BASE: OnceLock<PathBuf> = OnceLock::new();
-    BASE.get_or_init(|| {
-        if let Ok(d) = std::env::var("MORKY_DATA_DIR") {
-            PathBuf::from(d)
-        } else if let Ok(xdg) = std::env::var("XDG_DATA_HOME") {
-            PathBuf::from(xdg).join("morky")
-        } else if let Ok(home) = std::env::var("HOME") {
-            PathBuf::from(home).join(".local/share/morky")
-        } else {
-            PathBuf::from("./morky-data")
-        }
-    })
+    BASE.get_or_init(|| PathBuf::from(constants::morky_data_dir()))
 }
 
 pub fn dir() -> PathBuf {
@@ -72,11 +63,7 @@ pub fn routes_file() -> PathBuf {
     dir().join("routes.json")
 }
 fn host_dir() -> PathBuf {
-    if let Ok(d) = std::env::var("MORKY_HOST_DATA_DIR") {
-        PathBuf::from(d).join("haproxy")
-    } else {
-        dir() // fallback for running outside container
-    }
+    PathBuf::from(constants::morky_host_data_dir()).join("haproxy")
 }
 fn bind_mount() -> String {
     format!("{}:/etc/haproxy", host_dir().display())
