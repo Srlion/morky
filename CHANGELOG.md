@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Srlion/morky/compare/v0.5.0...v0.5.1) (2026-04-25)
+
+
+### Bug Fixes
+
+* fix volumes not working correctly ([1bf80ea](https://github.com/Srlion/morky/commit/1bf80eada860989558158b84377ef83601d330df))
+
 ## [0.5.0](https://github.com/Srlion/morky/compare/v0.4.0...v0.5.0) (2026-04-25)
 
 
