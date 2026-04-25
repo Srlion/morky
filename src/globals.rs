@@ -1,10 +1,11 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use bytes::Bytes;
 use maw::prelude::*;
 use serde_json::{Value, json};
 use tokio::sync::broadcast;
+
+use crate::common::TtlMap;
 
 static GLOBALS: std::sync::LazyLock<Globals> = std::sync::LazyLock::new(|| Globals::new());
 
@@ -15,7 +16,7 @@ pub fn set(key: impl Into<String>, val: impl Into<Value>) {
 
 #[derive(Clone)]
 pub struct Globals {
-    state: Arc<Mutex<HashMap<String, Value>>>,
+    state: TtlMap<String, Value>,
     tx: broadcast::Sender<(String, Value)>,
 }
 
@@ -23,7 +24,7 @@ impl Globals {
     fn new() -> Self {
         let (tx, _) = broadcast::channel(64);
         Self {
-            state: Arc::new(Mutex::new(HashMap::new())),
+            state: TtlMap::new(Duration::from_secs(60), Duration::from_hours(1)),
             tx,
         }
     }
@@ -32,12 +33,12 @@ impl Globals {
     fn set(&self, key: impl Into<String>, val: impl Into<Value>) {
         let key = key.into();
         let val = val.into();
-        self.state.lock().unwrap().insert(key.clone(), val.clone());
+        self.state.insert(key.clone(), val.clone());
         let _ = self.tx.send((key, val));
     }
 
-    fn snapshot(&self) -> HashMap<String, Value> {
-        self.state.lock().unwrap().clone()
+    fn snapshot(&self) -> TtlMap<String, Value> {
+        self.state.clone()
     }
 
     fn subscribe(&self) -> broadcast::Receiver<(String, Value)> {
