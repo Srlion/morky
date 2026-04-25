@@ -157,15 +157,6 @@ fi
 
 mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
-run "create buildkit container" podman create \
-    --name morky-buildkit \
-    --replace \
-    --privileged \
-    --network morky-haproxy-net \
-    --volume morky-buildkit.volume:/var/lib/buildkit \
-    moby/buildkit:v0.29.0 \
-    --addr tcp://0.0.0.0:1234
-
 # patch quadlet to use the GHCR image + tag (production only)
 if [[ ! -d "$QUADLET_SRC" ]]; then
     sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
