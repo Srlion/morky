@@ -157,6 +157,8 @@ fi
 
 mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
 
+install_quadlets
+
 # patch quadlet to use the GHCR image + tag (production only)
 if [[ ! -d "$QUADLET_SRC" ]]; then
     sed -i "s|^Image=.*|Image=$IMAGE:${TAG}|" "$QUADLET_DIR/morky.container"
