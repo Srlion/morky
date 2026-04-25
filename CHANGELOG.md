@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/Srlion/morky/compare/v0.6.1...v0.6.2) (2026-04-25)
+
+
+### Bug Fixes
+
+* fix volume path not saving for docker build type ([e3ad93f](https://github.com/Srlion/morky/commit/e3ad93fccaaefd826404635961a6b2c435057785))
+
 ## [0.6.1](https://github.com/Srlion/morky/compare/v0.6.0...v0.6.1) (2026-04-25)
 
 
