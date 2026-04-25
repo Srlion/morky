@@ -1,36 +1,36 @@
 <script>
-  import { page } from "$app/state";
-  import { onDestroy, onMount } from "svelte";
-  import { api } from "$lib/api";
+    import { page } from "$app/state";
+    import { onDestroy, onMount } from "svelte";
+    import { api } from "$lib/api";
 
-  let log = $state("Loading...");
-  let logEl = $state();
-  let timer;
+    let log = $state("Loading...");
+    let logEl = $state();
+    let timer;
 
-  const appId = $derived(page.params.appId);
+    const appId = $derived(page.params.appId);
 
-  onMount(() => {
-    refresh();
-    timer = setInterval(refresh, 3000);
-  });
-  onDestroy(() => clearInterval(timer));
+    onMount(() => {
+        refresh();
+        timer = setInterval(refresh, 3000);
+    });
+    onDestroy(() => clearInterval(timer));
 
-  async function refresh() {
-    const res = await api.get(`/apps/${appId}/container-logs`);
-    log = res.log || "(no logs)";
-    if (logEl) logEl.scrollTop = logEl.scrollHeight;
-  }
+    async function refresh() {
+        const res = await api.get(`/apps/${appId}/container-logs`);
+        log = res.log || "(no logs)";
+        if (logEl) logEl.scrollTop = logEl.scrollHeight;
+    }
 </script>
 
 <div class="flex items-center justify-between mb-3">
-  <span class="text-xs text-base-content/50"
-    >Container logs for <kbd class="kbd kbd-xs">app-{appId}</kbd></span
-  >
-  <button class="btn btn-xs btn-ghost" onclick={refresh}>
-    <span class="icon-[lucide--refresh-cw] size-3"></span> Refresh
-  </button>
+    <span class="text-xs text-base-content/50"
+        >Container logs for <kbd class="kbd kbd-xs">app-{appId}</kbd></span
+    >
+    <button class="btn btn-xs btn-ghost" onclick={refresh}>
+        <span class="icon-[lucide--refresh-cw] size-3"></span> Refresh
+    </button>
 </div>
 
 <pre
-  bind:this={logEl}
-  class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[70vh] overflow-auto whitespace-pre-wrap text-base-content/60">{log}</pre>
+    bind:this={logEl}
+    class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[70vh] overflow-auto whitespace-pre-wrap text-base-content/60">{log}</pre>
