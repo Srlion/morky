@@ -6,6 +6,9 @@
     import StatusBadge from "$lib/components/StatusBadge.svelte";
     import { DeployStatus } from "$lib/status";
     import { globals } from "$lib/globals.svelte";
+    import Convert from "ansi-to-html";
+
+    const convert = new Convert({ escapeXML: true });
 
     const g = globals();
     let { data } = $props();
@@ -14,6 +17,7 @@
     const deployment = $derived(deployOverride ?? data.deployment);
 
     let log = $state("Waiting for logs...");
+    let logHtml = $derived(convert.toHtml(log));
     let logEl = $state(undefined);
     let ws = null;
     let reconnectTimer = null;
@@ -280,7 +284,7 @@
                 </div>
                 <pre
                     bind:this={logEl}
-                    class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{log}</pre>
+                    class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{@html logHtml}</pre>
             </div>
 
             <!-- Container logs -->
@@ -326,9 +330,9 @@
                     <pre
                         class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{#each containerLines as [line, ts], i}<span
                                 class="text-base-content/30 select-none"
-                                >{fmtTs(
-                                    ts,
-                                )}  </span>{line}{#if i < containerLines.length - 1}{"\n"}{/if}{:else}No logs yet.{/each}</pre>
+                                >{fmtTs(ts)}  </span>{@html convert.toHtml(
+                                line,
+                            )}{#if i < containerLines.length - 1}{"\n"}{/if}{:else}No logs yet.{/each}</pre>
 
                     {#if hasMoreLogs}
                         <div class="mt-2 text-center">
