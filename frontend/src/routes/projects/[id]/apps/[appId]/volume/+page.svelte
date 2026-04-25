@@ -16,6 +16,10 @@
     let loading = $state(false);
     let uploading = $state(false);
     let fileInput = $state();
+    let dragging = $state(false);
+    let showMkdir = $state(false);
+    let newFolderName = $state("");
+    let mkdirInput = $state();
 
     const stopped = $derived(
         status === AppStatus.IDLE || status === AppStatus.FAILED,
@@ -48,7 +52,6 @@
             );
             entries = res.entries;
         } catch (e) {
-            // 403 just means app is running — the UI already shows the message
             if (!e.message?.includes("403") && !e.status === 403) {
                 toaster.error({ title: e.message });
             }
@@ -131,6 +134,53 @@
             uploading = false;
         }
     }
+
+    function handleDragOver(e) {
+        e.preventDefault();
+        dragging = true;
+    }
+
+    function handleDragLeave(e) {
+        if (e.currentTarget.contains(e.relatedTarget)) return;
+        dragging = false;
+    }
+
+    function handleDrop(e) {
+        e.preventDefault();
+        dragging = false;
+        const files = e.dataTransfer?.files;
+        if (files?.length) upload(files);
+    }
+
+    function startMkdir() {
+        showMkdir = true;
+        newFolderName = "";
+        setTimeout(() => mkdirInput?.focus(), 0);
+    }
+
+    async function createFolder() {
+        const name = newFolderName.trim();
+        if (!name) return;
+        const folderPath = path.endsWith("/") ? path + name : path + "/" + name;
+        try {
+            await api.post(
+                `/apps/${appId}/volume/mkdir?path=${encodeURIComponent(folderPath)}`,
+            );
+            showMkdir = false;
+            newFolderName = "";
+            await load();
+        } catch (e) {
+            toaster.error({ title: e.message });
+        }
+    }
+
+    function handleMkdirKey(e) {
+        if (e.key === "Enter") createFolder();
+        if (e.key === "Escape") {
+            showMkdir = false;
+            newFolderName = "";
+        }
+    }
 </script>
 
 {#if !hasVolume}
@@ -169,6 +219,10 @@
             bind:this={fileInput}
             onchange={(e) => upload(e.target.files)}
         />
+        <button class="btn btn-xs btn-outline" onclick={startMkdir}>
+            <span class="icon-[lucide--folder-plus] size-3"></span>
+            New Folder
+        </button>
         <button
             class="btn btn-xs btn-outline"
             onclick={() => fileInput.click()}
@@ -191,15 +245,58 @@
         </button>
     </div>
 
-    <!-- File table -->
-    <div class="border border-base-300 rounded-2xl overflow-hidden">
-        {#if loading}
+    <!-- New folder input -->
+    {#if showMkdir}
+        <div class="flex items-center gap-2 mb-3">
+            <span class="icon-[lucide--folder-plus] size-4 text-warning"></span>
+            <input
+                bind:this={mkdirInput}
+                bind:value={newFolderName}
+                onkeydown={handleMkdirKey}
+                class="input input-bordered input-sm flex-1 font-mono"
+                placeholder="folder name"
+            />
+            <button class="btn btn-xs btn-primary" onclick={createFolder}>
+                Create
+            </button>
+            <button
+                class="btn btn-xs btn-ghost"
+                onclick={() => {
+                    showMkdir = false;
+                    newFolderName = "";
+                }}
+            >
+                Cancel
+            </button>
+        </div>
+    {/if}
+
+    <!-- File table with drop zone -->
+    <div
+        role="region"
+        aria-label="File drop zone"
+        class="border rounded-2xl overflow-hidden transition-colors {dragging
+            ? 'border-primary bg-primary/5 border-dashed border-2'
+            : 'border-base-300'}"
+        ondragover={handleDragOver}
+        ondragleave={handleDragLeave}
+        ondrop={handleDrop}
+    >
+        {#if dragging}
+            <div class="p-12 text-center">
+                <span class="icon-[lucide--upload] size-8 text-primary mb-2"
+                ></span>
+                <p class="text-sm text-primary font-medium">
+                    Drop files here to upload
+                </p>
+            </div>
+        {:else if loading}
             <div class="p-8 text-center text-sm text-base-content/40">
                 <span class="loading loading-spinner loading-sm"></span>
             </div>
         {:else if entries.length === 0 && path === "/"}
             <div class="p-8 text-center text-sm text-base-content/40">
-                Volume is empty.
+                Volume is empty. Drag files here or click Upload.
             </div>
         {:else}
             <table class="table table-sm w-full">
