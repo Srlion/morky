@@ -11,6 +11,9 @@ pub use fqdn::is_fqdn;
 mod podman;
 pub use podman::podman;
 
+mod ttl_map;
+pub use ttl_map::TtlMap;
+
 mod defer;
 #[allow(unused)]
 pub use defer::defer;
