@@ -15,6 +15,7 @@ pub fn routes() -> Router {
         .post("/file", upload_file)
         .delete("/file", delete_file)
         .post("/mkdir", mkdir)
+        .post("/move", move_entry)
 }
 
 async fn volume_root(app_id: i64) -> Option<PathBuf> {
@@ -304,6 +305,59 @@ async fn mkdir(c: &mut Ctx) {
     }
 
     match tokio::fs::create_dir_all(&target).await {
+        Ok(_) => c.res.json(&serde_json::json!({ "ok": true })),
+        Err(e) => {
+            c.res
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .json(&serde_json::json!({ "error": e.to_string() }));
+        }
+    }
+}
+
+async fn move_entry(c: &mut Ctx) {
+    let Ok(app_id) = c.req.param::<i64>("app_id") else {
+        return bad(c, "invalid id");
+    };
+    let root = resolve_root!(c, app_id);
+
+    let from = match c.req.query_value::<String>("from") {
+        Ok(p) => p,
+        Err(_) => return bad(c, "missing 'from' param"),
+    };
+    let to = match c.req.query_value::<String>("to") {
+        Ok(p) => p,
+        Err(_) => return bad(c, "missing 'to' param"),
+    };
+
+    let src = match safe_join(&root, &from) {
+        Ok(p) => p,
+        Err(e) => return bad(c, e),
+    };
+    if !src.exists() {
+        return not_found(c);
+    }
+
+    let dst = match safe_join(&root, &to) {
+        Ok(p) => p,
+        Err(e) => return bad(c, e),
+    };
+
+    // If destination is a directory, move into it keeping the original name
+    let final_dst = if dst.is_dir() {
+        let name = src
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| "file".to_string());
+        dst.join(name)
+    } else {
+        dst
+    };
+
+    if final_dst.exists() {
+        return bad(c, "destination already exists");
+    }
+
+    match tokio::fs::rename(&src, &final_dst).await {
         Ok(_) => c.res.json(&serde_json::json!({ "ok": true })),
         Err(e) => {
             c.res
