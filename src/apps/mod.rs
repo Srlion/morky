@@ -7,6 +7,7 @@ use crate::models::{App, AppStatus, DeployStatus, Deployment};
 use crate::{common, db, globals};
 
 mod deployments;
+mod volume;
 
 pub fn routes() -> Router {
     db::on_update(|event| {
@@ -48,7 +49,11 @@ pub fn routes() -> Router {
         .post("/{app_id}/rollback/{deploy_id}", rollback_action)
         .put("/{app_id}/env", save_env)
         .get("/{app_id}/container-logs", container_logs)
-        .push(Router::group("/{app_id}").push(deployments::routes()))
+        .push(
+            Router::group("/{app_id}")
+                .push(deployments::routes())
+                .push(volume::routes()),
+        )
 }
 
 fn bad(c: &mut Ctx, msg: &str) {

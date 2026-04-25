@@ -12,6 +12,7 @@ Network=morky-haproxy-net
 Volume=%t/podman/podman.sock:/run/podman/podman.sock
 Volume=%h/.local/share/morky:/data
 Volume=morky-buildkit.volume:/var/lib/buildkit
+Volume=%h/.local/share/containers/storage/volumes:%h/.local/share/containers/storage/volumes
 
 Environment=MORKY_DATA_DIR=/data
 Environment=MORKY_HOST_DATA_DIR=%h/.local/share/morky

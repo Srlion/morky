@@ -640,6 +640,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd0f118536f44f5ccd48bcb8b111bdc3de888b58c74639dfb034a357d0f206d"
 
 [[package]]
+name = "encoding_rs"
+version = "0.8.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1445,15 +1454,16 @@ checksum = "8863b587001c1b9a8a4e36008cebc6b3612cb1226fe2de94858e06092687b608"
 
 [[package]]
 name = "maw"
-version = "0.28.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3972d06936fb33ad49d1c9738f3c64b436122cdbe0eb0e9c371b7410d09adda4"
+checksum = "b3d3eeeef0303d31d1a13267e2c8eaa8863771e1dc99bfa72e7199d7b98aa206"
 dependencies = [
  "base64",
  "bytes",
  "constant_time_eq",
  "cookie",
  "erased-serde",
+ "form_urlencoded",
  "futures-util",
  "http",
  "http-body",
@@ -1465,6 +1475,7 @@ dependencies = [
  "matchit",
  "mime_guess",
  "minijinja",
+ "multer",
  "paste",
  "pin-project-lite",
  "postcard",
@@ -1574,6 +1585,23 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "validator",
+]
+
+[[package]]
+name = "multer"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http",
+ "httparse",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
 ]
 
 [[package]]
