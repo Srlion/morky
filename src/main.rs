@@ -1,7 +1,9 @@
 use maw::{
+    CancellationToken,
     middlewares::cookie::{self, CookieOptions},
     prelude::*,
 };
+use tokio::signal::unix::{SignalKind, signal};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt as _, util::SubscriberInitExt as _};
 
 mod apps;
@@ -64,7 +66,7 @@ async fn main() -> Result<(), anyhow::Error> {
                 .map(|s| s.proxy_ip_header)
         })
         .router(routes())
-        .listen((constants::host(), constants::port()))
+        .listen_shutdown((constants::host(), constants::port()), shutdown_token())
         .await?;
 
     Ok(())
@@ -124,4 +126,18 @@ fn routes() -> Router {
 async fn me_handler(c: &mut Ctx) {
     let user: &models::User = c.res.locals.get("user").unwrap();
     c.res.json(serde_json::json!(user));
+}
+
+fn shutdown_token() -> CancellationToken {
+    let token = CancellationToken::new();
+    let t = token.clone();
+    tokio::spawn(async move {
+        let mut sigterm = signal(SignalKind::terminate()).unwrap();
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {},
+            _ = sigterm.recv() => {},
+        }
+        t.cancel();
+    });
+    token
 }
