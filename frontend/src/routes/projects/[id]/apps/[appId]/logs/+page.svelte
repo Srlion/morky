@@ -1,6 +1,6 @@
 <script>
     import { page } from "$app/state";
-    import { onDestroy, onMount } from "svelte";
+    import { onDestroy, onMount, tick } from "svelte";
     import { api } from "$lib/api";
     import Convert from "ansi-to-html";
 
@@ -22,6 +22,7 @@
     async function refresh() {
         const res = await api.get(`/apps/${appId}/container-logs`);
         log = res.log || "(no logs)";
+        await tick();
         if (logEl) logEl.scrollTop = logEl.scrollHeight;
     }
 </script>
