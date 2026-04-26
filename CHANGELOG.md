@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/Srlion/morky/compare/v0.7.0...v0.8.0) (2026-04-26)
+
+
+### Features
+
+* lots of stuff idc ([1c2eeec](https://github.com/Srlion/morky/commit/1c2eeeca815cdf6ff3fdf8e3673d42ab9335b97a))
+
+
+### Bug Fixes
+
+* fix install script to install quadlets ([867da17](https://github.com/Srlion/morky/commit/867da1782afd5110ba31b6f02b2087350632a5ad))
+* fix logs page in app not showing the newest ([44f924d](https://github.com/Srlion/morky/commit/44f924d40b5a6758bce13a7c9cd8d33d71146ec7))
+* fix shutdown signal to be received correctly ([39680bf](https://github.com/Srlion/morky/commit/39680bf574a01b60c863daff43dcf69a9ffb958e))
+* remove buildkit container creation from install script ([50d76e2](https://github.com/Srlion/morky/commit/50d76e215a5ee2ee5e3ef174f9ea6d5dd7658617))
+
 ## [0.7.0](https://github.com/Srlion/morky/compare/v0.6.3...v0.7.0) (2026-04-25)
 
 
