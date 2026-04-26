@@ -41,7 +41,7 @@ impl Job for StopJob {
             .args(["stop", "--time", "60", &name])
             .status()
             .await;
-        container::stop_log_tailer(app_id, app.current_deployment_id);
+        container::stop_log_tailer(app_id, app.current_deployment_id).await;
         let _ = podman().args(["rm", &name]).status().await;
 
         App::set_status(app_id, AppStatus::Idle)

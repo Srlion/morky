@@ -14,20 +14,23 @@ impl ContainerLog {
         Ok(())
     }
 
-    pub async fn get_lines(
+    pub async fn get_lines_desc(
         deployment_id: i64,
         offset: i64,
         limit: i64,
     ) -> db::Result<Vec<(String, i64)>> {
         conn()
-        .query_as(
-            "SELECT line, created_at FROM container_logs WHERE deployment_id = ? ORDER BY id ASC LIMIT ? OFFSET ?",
-        )
-        .bind(deployment_id)
-        .bind(limit)
-        .bind(offset)
-        .fetch_all()
-        .await
+            .query_as(
+                "SELECT line, created_at FROM container_logs \
+                 WHERE deployment_id = ? \
+                 ORDER BY id DESC \
+                 LIMIT ? OFFSET ?",
+            )
+            .bind(deployment_id)
+            .bind(limit)
+            .bind(offset)
+            .fetch_all()
+            .await
     }
 
     pub async fn count(deployment_id: i64) -> db::Result<i64> {

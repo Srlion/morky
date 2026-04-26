@@ -7,6 +7,7 @@
     import { DeployStatus } from "$lib/status";
     import { globals } from "$lib/globals.svelte";
     import Convert from "ansi-to-html";
+    import InfiniteScroll from "$lib/utils/InfiniteScroll.svelte";
 
     const convert = new Convert({ escapeXML: true });
 
@@ -29,6 +30,8 @@
     let containerLoaded = $state(false);
     let containerLoading = $state(false);
     let containerCopied = $state(false);
+    let containerLogEl = $state(undefined);
+    let containerModal = $state(undefined);
 
     const appId = $derived(page.params.appId);
     const deployId = $derived(page.params.deployId);
@@ -183,15 +186,23 @@
         });
     }
 
-    async function loadContainerLogs() {
+    async function openContainerLogs() {
+        containerModal?.showModal();
+        containerLines = [];
+        containerTotal = 0;
+        containerLoaded = false;
         containerLoading = true;
         try {
             const res = await api.get(
-                `/apps/${appId}/deployments/${deployId}/container-log?offset=0&limit=500`,
+                `/apps/${appId}/deployments/${deployId}/container-log?offset=0&limit=50`,
             );
             containerLines = res.lines;
             containerTotal = res.total;
             containerLoaded = true;
+            setTimeout(() => {
+                if (containerLogEl)
+                    containerLogEl.scrollTop = containerLogEl.scrollHeight;
+            }, 0);
         } catch (e) {
             toaster.error({ title: e.message });
         } finally {
@@ -200,12 +211,13 @@
     }
 
     async function loadMoreLogs() {
+        if (containerLoading || !hasMoreLogs) return;
         containerLoading = true;
         try {
             const res = await api.get(
-                `/apps/${appId}/deployments/${deployId}/container-log?offset=${containerLines.length}&limit=500`,
+                `/apps/${appId}/deployments/${deployId}/container-log?offset=${containerLines.length}&limit=100`,
             );
-            containerLines = [...containerLines, ...res.lines];
+            containerLines = [...res.lines, ...containerLines];
             containerTotal = res.total;
         } catch (e) {
             toaster.error({ title: e.message });
@@ -236,46 +248,55 @@
 {/snippet}
 
 {#if deployment}
-    <div class="flex items-center gap-3 mb-5">
-        <h2 class="text-lg font-semibold">Deployment #{deployment.id}</h2>
-        <StatusBadge status={liveStatus} />
-        {#if liveStatus === DeployStatus.BUILDING}
-            <button class="btn btn-xs btn-error btn-outline" onclick={cancel}>
-                <span class="icon-[lucide--x] size-3"></span> Cancel
-            </button>
-        {/if}
-    </div>
-
-    {#if deployment.error}
-        <div role="alert" class="alert alert-error text-sm mb-4">
-            {deployment.error}
-        </div>
-    {/if}
-
-    <div class="flex flex-col lg:flex-row gap-4">
-        <div
-            class="flex flex-col sm:flex-row lg:flex-col gap-3 lg:w-48 lg:shrink-0"
-        >
-            {#each meta as { label, value }}
-                <div
-                    class="card bg-base-100 border border-base-300 rounded-2xl p-3 sm:flex-1 lg:flex-none"
+    <div class="flex flex-col">
+        <div class="flex items-center gap-3 mb-5 flex-wrap">
+            <h2 class="text-lg font-semibold">Deployment #{deployment.id}</h2>
+            <StatusBadge status={liveStatus} />
+            {#if liveStatus === DeployStatus.BUILDING}
+                <button
+                    class="btn btn-xs btn-error btn-outline"
+                    onclick={cancel}
                 >
-                    <div class="text-[11px] text-base-content/40 mb-1">
-                        {label}
-                    </div>
-                    <div class="text-xs font-mono truncate">{value}</div>
-                </div>
-            {/each}
-            {#if deployment.commit_message}
-                <p class="text-[11px] text-base-content/40 leading-relaxed">
-                    {deployment.commit_message}
-                </p>
+                    <span class="icon-[lucide--x] size-3"></span> Cancel
+                </button>
             {/if}
+            <button
+                class="btn btn-xs btn-outline gap-1 ml-auto"
+                onclick={openContainerLogs}
+            >
+                <span class="icon-[lucide--terminal] size-3"></span>
+                Container Logs
+            </button>
         </div>
 
-        <div class="flex-1 min-w-0 flex flex-col gap-4">
-            <!-- Build log -->
-            <div>
+        {#if deployment.error}
+            <div role="alert" class="alert alert-error text-sm mb-4">
+                {deployment.error}
+            </div>
+        {/if}
+
+        <div class="flex flex-col lg:flex-row gap-4">
+            <div
+                class="flex flex-col sm:flex-row lg:flex-col gap-3 lg:w-48 lg:shrink-0 lg:overflow-y-auto"
+            >
+                {#each meta as { label, value }}
+                    <div
+                        class="card bg-base-100 border border-base-300 rounded-2xl p-3 sm:flex-1 lg:flex-none"
+                    >
+                        <div class="text-[11px] text-base-content/40 mb-1">
+                            {label}
+                        </div>
+                        <div class="text-xs font-mono truncate">{value}</div>
+                    </div>
+                {/each}
+                {#if deployment.commit_message}
+                    <p class="text-[11px] text-base-content/40 leading-relaxed">
+                        {deployment.commit_message}
+                    </p>
+                {/if}
+            </div>
+
+            <div class="flex-1 min-w-0 flex flex-col">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold">Build Log</h3>
                     {@render copyBtn(copied, () =>
@@ -284,73 +305,78 @@
                 </div>
                 <pre
                     bind:this={logEl}
-                    class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{@html logHtml}</pre>
-            </div>
-
-            <!-- Container logs -->
-            <div>
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold">Container Logs</h3>
-                    {#if !containerLoaded}
-                        <button
-                            class="btn btn-xs btn-outline gap-1"
-                            onclick={loadContainerLogs}
-                            disabled={containerLoading}
-                        >
-                            {#if containerLoading}
-                                <span class="loading loading-spinner loading-xs"
-                                ></span>
-                            {:else}
-                                <span class="icon-[lucide--terminal] size-3"
-                                ></span>
-                            {/if}
-                            Load Logs
-                        </button>
-                    {:else}
-                        <div class="flex items-center gap-2">
-                            <span class="text-[11px] text-base-content/40"
-                                >{containerLines.length} / {containerTotal} lines</span
-                            >
-                            {@render copyBtn(containerCopied, () =>
-                                clipboardCopy(
-                                    containerLines
-                                        .map(
-                                            ([line, ts]) =>
-                                                `${fmtTs(ts)}  ${line}`,
-                                        )
-                                        .join("\n"),
-                                    (v) => (containerCopied = v),
-                                ),
-                            )}
-                        </div>
-                    {/if}
-                </div>
-
-                {#if containerLoaded}
-                    <pre
-                        class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono max-h-[50vh] lg:max-h-[65vh] overflow-auto whitespace-pre-wrap break-all text-base-content/60">{#each containerLines as [line, ts], i}<span
-                                class="text-base-content/30 select-none"
-                                >{fmtTs(ts)}  </span>{@html convert.toHtml(
-                                line,
-                            )}{#if i < containerLines.length - 1}{"\n"}{/if}{:else}No logs yet.{/each}</pre>
-
-                    {#if hasMoreLogs}
-                        <div class="mt-2 text-center">
-                            <button
-                                class="btn btn-xs btn-ghost"
-                                onclick={loadMoreLogs}
-                                disabled={containerLoading}
-                            >
-                                {#if containerLoading}
-                                    <span
-                                        class="loading loading-spinner loading-xs"
-                                    ></span>
-                                {:else}Load more{/if}
-                            </button>
-                        </div>
-                    {/if}
-                {/if}
+                    class="bg-base-200 border border-base-300 rounded-2xl p-4 text-xs font-mono overflow-auto whitespace-pre-wrap break-all text-base-content/60"
+                    style="height: max(400px, calc(100vh - 330px))">{@html logHtml}</pre>
             </div>
         </div>
     </div>
+
+    <!-- Container logs modal -->
+    <dialog bind:this={containerModal} class="modal">
+        <div class="modal-box max-w-4xl flex flex-col gap-3 p-5">
+            <div class="flex items-center justify-between gap-3">
+                <h3 class="text-base font-semibold flex items-center gap-2">
+                    <span class="icon-[lucide--terminal] size-4"></span>
+                    Container Logs
+                </h3>
+                <div class="flex items-center gap-2">
+                    {#if containerLoaded}
+                        <span class="text-[11px] text-base-content/40">
+                            {containerLines.length} / {containerTotal} lines
+                        </span>
+                        {@render copyBtn(containerCopied, () =>
+                            clipboardCopy(
+                                containerLines
+                                    .map(
+                                        ([line, ts]) => `${fmtTs(ts)}  ${line}`,
+                                    )
+                                    .join("\n"),
+                                (v) => (containerCopied = v),
+                            ),
+                        )}
+                    {/if}
+                    <form method="dialog">
+                        <button
+                            class="btn btn-xs btn-ghost btn-circle"
+                            aria-label="Close"
+                        >
+                            <span class="icon-[lucide--x] size-3"></span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            {#if containerLoading && !containerLoaded}
+                <div
+                    class="bg-base-200 border border-base-300 rounded-2xl p-8 flex items-center justify-center gap-2 text-sm text-base-content/60"
+                >
+                    <span class="loading loading-spinner loading-sm"></span>
+                    Loading logs...
+                </div>
+            {:else if containerLoaded}
+                <div
+                    bind:this={containerLogEl}
+                    class="bg-base-200 border border-base-300 rounded-2xl p-4 h-[70vh] overflow-auto"
+                >
+                    <InfiniteScroll
+                        hasMore={hasMoreLogs}
+                        reverse={true}
+                        elementScroll={containerLogEl}
+                        onLoadMore={loadMoreLogs}
+                    />
+
+                    <pre
+                        class="text-xs font-mono whitespace-pre-wrap break-all text-base-content/60">{#each containerLines as [line, ts], i}<div
+                                class="py-0.5"><span
+                                    class="text-base-content/30 select-none"
+                                    >{fmtTs(ts)}  </span>{@html convert.toHtml(
+                                    line,
+                                )}</div>{:else}No logs yet.{/each}</pre>
+                </div>
+            {/if}
+        </div>
+        <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+        </form>
+    </dialog>
 {/if}

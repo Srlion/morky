@@ -2,16 +2,16 @@ use std::collections::HashMap;
 use std::os::fd::OwnedFd;
 use std::sync::{LazyLock, Mutex};
 
+use maw::CancellationToken;
 use tokio::io::{AsyncBufReadExt as _, BufReader};
 
-use crate::common::podman;
+use crate::common::{LogErr, podman};
 use crate::deploy::env::{EnvMode, inject_env};
 use crate::deploy::shell::run_logged;
-use crate::models::{App, Deployment};
+use crate::models::{App, ContainerLog, Deployment};
 use crate::{constants, networking};
 
-static TAILERS: LazyLock<Mutex<HashMap<i64, tokio::task::AbortHandle>>> =
-    LazyLock::new(Default::default);
+static TAILERS: LazyLock<Mutex<HashMap<i64, CancellationToken>>> = LazyLock::new(Default::default);
 
 pub fn name(app_id: i64) -> String {
     format!("app-{app_id}")
@@ -28,12 +28,17 @@ pub async fn start(deployment: &Deployment, log_to: Option<i64>) -> Result<(), S
         .map_err(|e| format!("project not found: {e}"))?;
 
     let net = networking::project_net(project_id);
-    let _ = podman()
+    podman()
         .args(["stop", "--time", "60", &container_name])
         .output()
-        .await;
-    stop_log_tailer(app_id, Some(deploy_id));
-    let _ = podman().args(["rm", &container_name]).output().await;
+        .await
+        .log_err("failed to stop container");
+    stop_log_tailer(app_id, Some(deploy_id)).await;
+    podman()
+        .args(["rm", &container_name])
+        .output()
+        .await
+        .log_err("failed to remove container");
 
     let mut args: Vec<String> = [
         "run",
@@ -55,7 +60,6 @@ pub async fn start(deployment: &Deployment, log_to: Option<i64>) -> Result<(), S
     let volume_path = &deployment.volume_path;
     if !volume_path.is_empty() {
         let host_dir = format!("{}/volumes/app-{app_id}", constants::morky_host_data_dir());
-        // ensure it exists on the host
         let container_dir = format!("{}/volumes/app-{app_id}", constants::morky_data_dir());
         let _ = tokio::fs::create_dir_all(&container_dir).await;
         args.extend(["-v".into(), format!("{host_dir}:{volume_path}")]);
@@ -93,74 +97,63 @@ pub async fn start(deployment: &Deployment, log_to: Option<i64>) -> Result<(), S
     Ok(())
 }
 
+async fn log_marker(deploy_id: i64, text: &str) {
+    ContainerLog::append(deploy_id, text, chrono::Utc::now().timestamp())
+        .await
+        .log_err("failed to append container marker log");
+}
+
 pub fn start_log_tailer(app_id: i64, deploy_id: i64) {
     let mut tailers = TAILERS.lock().unwrap();
     if tailers.contains_key(&app_id) {
         return;
     }
 
-    let handle = tokio::spawn(async move {
-        let _ = crate::models::ContainerLog::append(
-            deploy_id,
-            "--- container started ---",
-            chrono::Utc::now().timestamp(),
-        )
-        .await;
+    let token = CancellationToken::new();
+    tailers.insert(app_id, token.clone());
 
-        let cname = name(app_id);
-        let (reader, writer) = match std::io::pipe() {
-            Ok(p) => p,
-            Err(e) => {
-                tracing::warn!(app_id, "pipe creation failed: {e}");
-                TAILERS.lock().unwrap().remove(&app_id);
-                return;
-            }
-        };
+    tokio::spawn(async move {
+        log_marker(deploy_id, "--- container started ---").await;
 
-        let mut child = match podman()
-            .args(["logs", "-f", "--timestamps", &cname])
-            .stdout(writer.try_clone().expect("pipe stdout"))
-            .stderr(writer)
-            .spawn()
-        {
-            Ok(c) => c,
-            Err(e) => {
-                tracing::warn!(app_id, "log tailer spawn failed: {e}");
-                TAILERS.lock().unwrap().remove(&app_id);
-                return;
-            }
-        };
+        tail_logs(app_id, deploy_id, token)
+            .await
+            .log_err("log tailer failed");
 
-        let owned_fd: OwnedFd = reader.into();
-        let std_file = std::fs::File::from(owned_fd);
-        let async_file = tokio::fs::File::from_std(std_file);
-        let mut lines = BufReader::new(async_file).lines();
-
-        while let Ok(Some(line)) = lines.next_line().await {
-            let (ts, text) = parse_log_line(&line);
-            let _ = crate::models::ContainerLog::append(deploy_id, text, ts).await;
-        }
-
-        let _ = child.wait().await;
+        log_marker(deploy_id, "--- container stopped ---").await;
         TAILERS.lock().unwrap().remove(&app_id);
     });
-
-    tailers.insert(app_id, handle.abort_handle());
 }
 
-pub fn stop_log_tailer(app_id: i64, deploy_id: Option<i64>) {
-    if let Some(handle) = TAILERS.lock().unwrap().remove(&app_id) {
-        handle.abort();
-        if let Some(did) = deploy_id {
-            tokio::spawn(async move {
-                let _ = crate::models::ContainerLog::append(
-                    did,
-                    "--- container stopped ---",
-                    chrono::Utc::now().timestamp(),
-                )
-                .await;
-            });
+async fn tail_logs(app_id: i64, deploy_id: i64, token: CancellationToken) -> std::io::Result<()> {
+    let (reader, writer) = std::io::pipe()?;
+    let mut child = podman()
+        .args(["logs", "-f", "--timestamps", &name(app_id)])
+        .stdout(writer.try_clone()?)
+        .stderr(writer)
+        .spawn()?;
+
+    let async_file = tokio::fs::File::from_std(std::fs::File::from(OwnedFd::from(reader)));
+    let mut lines = BufReader::new(async_file).lines();
+
+    tokio::select! {
+        _ = token.cancelled() => {
+            let _ = child.kill().await;
         }
+        _ = async {
+            while let Ok(Some(line)) = lines.next_line().await {
+                let (ts, text) = parse_log_line(&line);
+                ContainerLog::append(deploy_id, text, ts).await.log_err("failed to append container log");
+            }
+            child.wait().await.log_err("failed to wait for child");
+        } => {}
+    }
+    Ok(())
+}
+
+pub async fn stop_log_tailer(app_id: i64, _deploy_id: Option<i64>) {
+    let token = TAILERS.lock().unwrap().remove(&app_id);
+    if let Some(t) = token {
+        t.cancel();
     }
 }
 

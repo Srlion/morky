@@ -216,7 +216,7 @@
             return;
         }
 
-        // Internal drop on the table background (not on a folder row) — ignore
+        // Internal drop on the table background (not on a folder row) - ignore
 
         dragEntry = null;
 

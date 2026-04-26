@@ -243,10 +243,13 @@ async fn get_container_log(c: &mut Ctx) {
             limit: 500,
         });
     let limit = q.limit.max(1);
-    let lines = ContainerLog::get_lines(deploy_id, q.offset, limit)
+    let total = ContainerLog::count(deploy_id).await.unwrap_or(0);
+
+    // Fetch newest first, then reverse so display is chronological (newest at bottom)
+    let mut lines = ContainerLog::get_lines_desc(deploy_id, q.offset, limit)
         .await
         .unwrap_or_default();
-    let total = ContainerLog::count(deploy_id).await.unwrap_or(0);
+    lines.reverse();
 
     c.res.json(&serde_json::json!({
         "lines": lines,

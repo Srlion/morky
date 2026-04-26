@@ -34,3 +34,22 @@ pub async fn public_base_url() -> Result<String, reqwest::Error> {
         .to_string();
     Ok(format!("http://{ip}:{}", constants::port()))
 }
+
+pub trait LogErr<T> {
+    #[track_caller]
+    fn log_err(self, msg: &str) -> Option<T>;
+}
+
+impl<T, E: std::fmt::Display> LogErr<T> for Result<T, E> {
+    #[track_caller]
+    fn log_err(self, msg: &str) -> Option<T> {
+        match self {
+            Ok(v) => Some(v),
+            Err(e) => {
+                let loc = std::panic::Location::caller();
+                tracing::error!("{}:{}: {msg}: {e}", loc.file(), loc.line());
+                None
+            }
+        }
+    }
+}
