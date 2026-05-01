@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/Srlion/morky/compare/v0.8.0...v0.8.1) (2026-05-01)
+
+
+### Bug Fixes
+
+* update dependencies to latest ([304f95e](https://github.com/Srlion/morky/commit/304f95eb8827083897862f9b4f318cd32b36d7a7))
+
 ## [0.8.0](https://github.com/Srlion/morky/compare/v0.7.0...v0.8.0) (2026-04-26)
 
 
