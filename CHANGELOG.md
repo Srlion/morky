@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/Srlion/morky/compare/v0.8.1...v0.8.2) (2026-05-12)
+
+
+### Bug Fixes
+
+* make buildkit address configurable via environment variable ([8ae58bd](https://github.com/Srlion/morky/commit/8ae58bd50bf2da0b19ca6b38f320227bcc521374))
+
 ## [0.8.1](https://github.com/Srlion/morky/compare/v0.8.0...v0.8.1) (2026-05-01)
 
 
