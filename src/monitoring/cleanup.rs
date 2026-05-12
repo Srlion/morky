@@ -110,7 +110,7 @@ pub async fn run_cleanup(req: CleanupRequest) -> CleanupResult {
         match tokio::process::Command::new("buildctl")
             .args([
                 "--addr",
-                buildkit::ADDR,
+                &buildkit::addr(),
                 "prune",
                 "--keep-storage",
                 &keep_bytes,

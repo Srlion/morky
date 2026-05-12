@@ -29,7 +29,7 @@ impl Builder for RailpackBuilder {
         let hash = secrets_hash(env_vars);
         let mut args: Vec<String> = vec![
             "--addr".into(),
-            buildkit::ADDR.into(),
+            buildkit::addr().into(),
             "build".into(),
             "--frontend".into(),
             "gateway.v0".into(),

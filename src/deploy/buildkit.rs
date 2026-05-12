@@ -5,7 +5,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::process::Command;
 use tokio::sync::Mutex;
 
-pub const ADDR: &str = "tcp://morky-buildkit:1234";
+pub fn addr() -> String {
+    std::env::var("BUILDKIT_ADDR").unwrap_or_else(|_| "tcp://morky-buildkit:1234".to_string())
+}
+
 const IDLE_TIMEOUT: Duration = Duration::from_secs(10);
 
 static ACTIVE: AtomicU64 = AtomicU64::new(0);
@@ -53,7 +56,7 @@ pub async fn ensure_running() -> anyhow::Result<Guard> {
 
 async fn is_ready() -> bool {
     Command::new("buildctl")
-        .args(["--addr", ADDR, "debug", "workers"])
+        .args(["--addr", &addr(), "debug", "workers"])
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .output()

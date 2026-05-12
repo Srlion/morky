@@ -22,7 +22,7 @@ impl Builder for DockerfileBuilder {
             "buildctl",
             &[
                 "--addr",
-                buildkit::ADDR,
+                &buildkit::addr(),
                 "build",
                 "--frontend",
                 "dockerfile.v0",

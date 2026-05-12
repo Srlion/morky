@@ -262,7 +262,7 @@ async fn podman_disk_handler(c: &mut Ctx) {
 
     let _g = buildkit::ensure_running().await;
     let buildkit_bytes = match tokio::process::Command::new("buildctl")
-        .args(["--addr", buildkit::ADDR, "du", "--format", "json"])
+        .args(["--addr", &buildkit::addr(), "du", "--format", "json"])
         .output()
         .await
     {
