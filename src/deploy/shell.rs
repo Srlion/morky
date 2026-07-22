@@ -17,7 +17,21 @@ pub async fn run_logged_with_env(
     cwd: &str,
     env: &HashMap<String, String>,
 ) -> Result<(), String> {
-    log_broadcast::append_log(deploy_id, &format!("$ {cmd} {}", args.join(" "))).await;
+    let shown: Vec<String> = args
+        .iter()
+        .scan(false, |redact, a| {
+            let out = if *redact {
+                a.split_once('=')
+                    .map(|(k, _)| format!("{k}=***"))
+                    .unwrap_or_else(|| "***".into())
+            } else {
+                a.to_string()
+            };
+            *redact = *a == "--env" || *a == "--secret";
+            Some(out)
+        })
+        .collect();
+    log_broadcast::append_log(deploy_id, &format!("$ {cmd} {}", shown.join(" "))).await;
 
     let mut command = Command::new(cmd);
     command
