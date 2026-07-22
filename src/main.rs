@@ -56,6 +56,16 @@ async fn main() -> Result<(), anyhow::Error> {
     deploy::init().await; // register job types
     backup::register_jobs();
     jobs::start();
+    tokio::spawn(async {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_secs(24 * 3600)).await;
+            if let Ok(n) = crate::models::Session::delete_expired().await
+                && n > 0
+            {
+                tracing::info!("purged {n} expired sessions");
+            }
+        }
+    });
     monitoring::start_sampler();
 
     App::new()

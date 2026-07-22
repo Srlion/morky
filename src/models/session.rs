@@ -64,7 +64,6 @@ impl Session {
         Ok(())
     }
 
-    #[allow(unused)]
     pub async fn delete_expired() -> db::Result<u64> {
         conn()
             .query("DELETE FROM sessions WHERE expires_at <= unixepoch()")
