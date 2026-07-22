@@ -21,7 +21,7 @@ futures-util = "0.3.33"
 http = "1.4.2"
 hyper = { version = "1.11.0", features = [] }
 jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
-maw = { version = "0.30.3", features = ["full", "static_files_debug_embed"] }
+maw = { version = "0.30", features = ["full", "static_files_debug_embed"] }
 mimalloc = "0.1.52"
 nix = { version = "0.31.3", features = ["fs"] }
 num_cpus = "1.17.0"
