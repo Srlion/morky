@@ -166,10 +166,13 @@ impl App {
             .query_scalar("SELECT port FROM apps ORDER BY port")
             .fetch_all()
             .await?;
-
+        let panel = crate::constants::port() as i64;
         let mut port = 4000;
         for p in &used {
             if *p == port {
+                port += 1;
+            }
+            if port == panel {
                 port += 1;
             }
         }
