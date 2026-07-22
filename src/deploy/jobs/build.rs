@@ -11,7 +11,7 @@ use crate::{
     },
     git_sources::ops as git,
     jobs::{self, Job},
-    models::{DeployStatus, Deployment},
+    models::{App, AppStatus, DeployStatus, Deployment},
 };
 
 #[derive(Serialize, Deserialize)]
@@ -50,6 +50,15 @@ impl Job for BuildJob {
                     tracing::error!(deploy_id, app_id, "failed to enqueue deploy container: {e}");
                     fail_deploy(app_id, deploy_id, &e).await;
                 }
+            }
+            Err(e) if e == "cancelled" => {
+                log_broadcast::append_log(deploy_id, "build cancelled").await;
+                let _ = Deployment::finish(deploy_id, DeployStatus::Cancelled, None).await;
+                if let Ok(AppStatus::Deploying) = App::get_status(app_id).await {
+                    let _ = App::set_status(app_id, AppStatus::Idle).await;
+                }
+                log_broadcast::send_status(deploy_id, DeployStatus::Cancelled);
+                log_broadcast::remove(deploy_id);
             }
             Err(e) => {
                 tracing::error!(deploy_id, app_id, "build failed: {e}");
