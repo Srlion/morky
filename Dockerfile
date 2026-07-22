@@ -1,5 +1,5 @@
 # Stage 1: Build frontend with Deno
-FROM denoland/deno:2.7.12 AS frontend
+FROM denoland/deno:2.9.3 AS frontend
 WORKDIR /src/frontend
 COPY frontend/deno.json frontend/deno.lock frontend/package.json frontend/svelte.config.js frontend/vite.config.js ./
 RUN deno install --node-modules-dir
@@ -24,15 +24,15 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cp /src/target/x86_64-unknown-linux-musl/$PROFILE_DIR/morky /usr/local/bin/morky
 
 # Stage 3: Runtime
-FROM docker.io/library/debian:trixie-20260406-slim AS runtime-base
-ARG RUNC_VERSION=v1.4.2
-ARG PODMAN_VERSION=v5.8.2
-ARG BUILDKIT_VERSION=v0.29.0
+FROM docker.io/library/debian:trixie-slim AS runtime-base
+ARG CRUN_VERSION=1.28
+ARG PODMAN_VERSION=v6.0.2
+ARG BUILDKIT_VERSION=v0.31.2
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates curl unzip git \
-    && curl -fsSL -o /usr/local/bin/runc \
-            https://github.com/opencontainers/runc/releases/download/${RUNC_VERSION}/runc.amd64 \
-    && chmod +x /usr/local/bin/runc \
+    && curl -fsSL -o /usr/local/bin/crun \
+            https://github.com/containers/crun/releases/download/${CRUN_VERSION}/crun-${CRUN_VERSION}-linux-amd64 \
+    && chmod +x /usr/local/bin/crun \
     && curl -fsSL https://github.com/containers/podman/releases/download/${PODMAN_VERSION}/podman-remote-static-linux_amd64.tar.gz \
         | tar xz -C /tmp \
     && mv /tmp/bin/podman-remote-static-linux_amd64 /usr/local/bin/podman \
