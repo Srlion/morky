@@ -132,19 +132,18 @@ impl App {
             .txn(move |t| {
                 t.query(
                     "UPDATE deployments SET status = 'superseded', finished_at = unixepoch() \
-             WHERE app_id = ? AND status = 'running' AND id != ?",
+             WHERE id = (SELECT current_deployment_id FROM apps WHERE id = ?) \
+               AND id != ? AND status = 'done'",
                 )
                 .bind(id)
                 .bind(deployment_id)
                 .execute()?;
-
                 t.query(
                     "UPDATE apps SET current_deployment_id = ?, status = 'running' WHERE id = ?",
                 )
                 .bind(deployment_id)
                 .bind(id)
                 .execute()?;
-
                 Ok(())
             })
             .await
