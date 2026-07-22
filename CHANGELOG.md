@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.2](https://github.com/Srlion/morky/compare/v0.8.1...v0.8.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* make buildkit address configurable via environment variable ([8ae58bd](https://github.com/Srlion/morky/commit/8ae58bd50bf2da0b19ca6b38f320227bcc521374))
+* update Deno and Debian base images, and switch to crun for container runtime ([be73bca](https://github.com/Srlion/morky/commit/be73bca731d85a623eebf6ff305e76457923974f))
+* update dependencies in Cargo.toml ([a5253ce](https://github.com/Srlion/morky/commit/a5253cefaa162716b0025374f1c48921543ba5a8))
+* use regex-lite over regex crate ([5c5180a](https://github.com/Srlion/morky/commit/5c5180aa747b75e8a18990403593051fe09856ec))
+
 ## [0.8.1](https://github.com/Srlion/morky/compare/v0.8.0...v0.8.1) (2026-05-01)
 
 
