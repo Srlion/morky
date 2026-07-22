@@ -25,7 +25,8 @@ async fn get(c: &mut Ctx) {
 
 #[derive(Deserialize)]
 struct UpdateBody {
-    panel_domain: Option<String>,
+    #[serde(default, with = "::serde_with::rust::double_option")]
+    panel_domain: Option<Option<String>>, // absent=None, null=Some(None), "x"=Some(Some)
     proxy_ip_header: Option<String>,
 }
 
@@ -40,26 +41,26 @@ async fn update(c: &mut Ctx) {
         }
     };
 
-    let pd = body
-        .panel_domain
-        .map(|s| s.trim().to_lowercase())
-        .filter(|s| !s.is_empty());
-    if let Some(ref d) = pd
-        && !crate::common::is_fqdn(d)
-    {
-        return c
-            .res
-            .status(StatusCode::BAD_REQUEST)
-            .json(serde_json::json!({"error": "invalid domain"}));
+    let mut update = Settings::update();
+    if let Some(raw) = body.panel_domain {
+        let pd = raw
+            .map(|s| s.trim().to_lowercase())
+            .filter(|s| !s.is_empty());
+        if let Some(ref d) = pd
+            && !crate::common::is_fqdn(d)
+        {
+            return c
+                .res
+                .status(StatusCode::BAD_REQUEST)
+                .json(serde_json::json!({"error": "invalid domain"}));
+        }
+        update = update.panel_domain(pd);
     }
-
-    let header = body
+    if let Some(h) = body
         .proxy_ip_header
         .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty());
-
-    let mut update = Settings::update().panel_domain(pd);
-    if let Some(h) = header {
+        .filter(|s| !s.is_empty())
+    {
         update = update.proxy_ip_header(h);
     }
 
