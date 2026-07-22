@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use maw::prelude::*;
-use tokio::io::AsyncReadExt;
+use tokio::io::AsyncWriteExt as _;
 
 use crate::{
     constants,
@@ -166,30 +166,26 @@ async fn download_file(c: &mut Ctx) {
         return not_found(c);
     }
 
-    let mut f = match tokio::fs::File::open(&file_path).await {
-        Ok(f) => f,
-        Err(_) => return not_found(c),
-    };
-    let mut buf = Vec::new();
-    if f.read_to_end(&mut buf).await.is_err() {
-        c.res
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(serde_json::json!({ "error": "read failed" }));
-        return;
-    }
-
     let fname = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "file".to_string());
 
-    c.res
+    let res = c
+        .res
         .header((
             "content-disposition",
             &format!("attachment; filename=\"{fname}\""),
         ))
         .header(("content-type", "application/octet-stream"))
-        .send(buf);
+        .send_file(&file_path)
+        .await; // same API backup/mod.rs uses
+    if let Err(e) = res {
+        tracing::error!("send volume file: {e}");
+        c.res
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .json(serde_json::json!({"error": "read failed"}));
+    }
 }
 
 async fn upload_file(c: &mut Ctx) {
@@ -197,7 +193,6 @@ async fn upload_file(c: &mut Ctx) {
         return bad(c, "invalid id");
     };
     let root = resolve_root!(c, app_id);
-
     let dir_rel = c
         .req
         .query_value::<String>("path")
@@ -206,6 +201,9 @@ async fn upload_file(c: &mut Ctx) {
         Ok(p) => p,
         Err(e) => return bad(c, e),
     };
+    if !dir_path.exists() && tokio::fs::create_dir_all(&dir_path).await.is_err() {
+        return bad(c, "could not create target directory");
+    }
 
     let mut mp = match c.req.multipart() {
         Ok(m) => m,
@@ -213,42 +211,51 @@ async fn upload_file(c: &mut Ctx) {
     };
 
     let mut saved = 0usize;
-    while let Ok(Some(field)) = mp.next_field().await {
+    while let Ok(Some(mut field)) = mp.next_field().await {
         let filename = field
             .file_name()
-            .map(|s| s.to_string())
-            .or_else(|| field.name().map(|s| s.to_string()))
-            .unwrap_or_else(|| "upload".to_string());
-
-        let filename = PathBuf::from(&filename)
-            .file_name()
-            .map(|n| n.to_string_lossy().to_string())
+            .map(str::to_string)
+            .or_else(|| field.name().map(str::to_string))
+            .and_then(|f| {
+                PathBuf::from(f)
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+            })
             .unwrap_or_else(|| "upload".to_string());
 
         let dest = dir_path.join(&filename);
-        if let Some(parent) = dest.parent() {
-            let parent_canon = parent.canonicalize().unwrap_or(parent.to_path_buf());
-            if !parent_canon.starts_with(&root) {
-                return bad(c, "invalid path");
+        let mut file = match tokio::fs::File::create(&dest).await {
+            Ok(f) => f,
+            Err(e) => {
+                tracing::error!("create failed: {e} | dest: {dest:?}");
+                return c
+                    .res
+                    .status(StatusCode::INTERNAL_SERVER_ERROR)
+                    .json(serde_json::json!({"error": "write failed"}));
             }
-        }
-
-        let data = match field.bytes().await {
-            Ok(b) => b,
-            Err(_) => return bad(c, "failed to read field"),
         };
-        if let Err(e) = tokio::fs::write(&dest, &data).await {
-            tracing::error!("write failed: {e} | dest: {:?}", dest);
-            c.res
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(serde_json::json!({"error": "write failed"}));
-            return;
+        loop {
+            match field.chunk().await {
+                Ok(Some(chunk)) => {
+                    if let Err(e) = file.write_all(&chunk).await {
+                        tracing::error!("write failed: {e} | dest: {dest:?}");
+                        let _ = tokio::fs::remove_file(&dest).await; // don't leave partial files
+                        return c
+                            .res
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .json(serde_json::json!({"error": "write failed"}));
+                    }
+                }
+                Ok(None) => break,
+                Err(_) => {
+                    let _ = tokio::fs::remove_file(&dest).await;
+                    return bad(c, "failed to read field");
+                }
+            }
         }
         saved += 1;
     }
-
-    c.res
-        .json(serde_json::json!({ "ok": true, "saved": saved }));
+    c.res.json(serde_json::json!({"ok": true, "saved": saved}));
 }
 
 async fn delete_file(c: &mut Ctx) {
@@ -290,20 +297,14 @@ async fn mkdir(c: &mut Ctx) {
         return bad(c, "invalid id");
     };
     let root = resolve_root!(c, app_id);
-
     let rel = match c.req.query_value::<String>("path") {
         Ok(p) => p,
         Err(_) => return bad(c, "missing path"),
     };
-    let target = root.join(rel.trim_start_matches('/'));
-    let parent = target
-        .parent()
-        .and_then(|p| p.canonicalize().ok())
-        .unwrap_or_default();
-    if !parent.starts_with(&root) {
-        return bad(c, "path outside volume");
-    }
-
+    let target = match safe_join(&root, &rel) {
+        Ok(p) => p,
+        Err(e) => return bad(c, e),
+    };
     match tokio::fs::create_dir_all(&target).await {
         Ok(_) => c.res.json(serde_json::json!({ "ok": true })),
         Err(e) => {
