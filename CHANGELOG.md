@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.5](https://github.com/Srlion/morky/compare/v0.8.4...v0.8.5) (2026-07-22)
+
+
+### Bug Fixes
+
+* try to get rid of small memory leaks ([1f1c717](https://github.com/Srlion/morky/commit/1f1c717b7343d07d08726844939b1cb4d5060242))
+* update maw dependency version to latest ([a1d32a2](https://github.com/Srlion/morky/commit/a1d32a22bb15ef54310f75f8c4674860576fb730))
+
 ## [0.8.4](https://github.com/Srlion/morky/compare/v0.8.3...v0.8.4) (2026-07-22)
 
 
