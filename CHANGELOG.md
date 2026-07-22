@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.10](https://github.com/Srlion/morky/compare/v0.8.9...v0.8.10) (2026-07-22)
+
+
+### Bug Fixes
+
+* try to trace the memory leak ([50a1ee0](https://github.com/Srlion/morky/commit/50a1ee05bf78a0eb17393fbde61a5d425b613455))
+
 ## [0.8.9](https://github.com/Srlion/morky/compare/v0.8.8...v0.8.9) (2026-07-22)
 
 
