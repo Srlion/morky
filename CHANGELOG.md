@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.3](https://github.com/Srlion/morky/compare/v0.8.2...v0.8.3) (2026-07-22)
+
+
+### Bug Fixes
+
+* publish as prerelease till "release" job finishes ([391a243](https://github.com/Srlion/morky/commit/391a243e8265a6ddfedc0df2e53223cdf0c00274))
+
 ## [0.8.2](https://github.com/Srlion/morky/compare/v0.8.1...v0.8.2) (2026-07-22)
 
 
