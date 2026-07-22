@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.11](https://github.com/Srlion/morky/compare/v0.8.10...v0.8.11) (2026-07-22)
+
+
+### Bug Fixes
+
+* trigger build ([beafc92](https://github.com/Srlion/morky/commit/beafc920d0a3f3a167a84885bc587359392fe412))
+
 ## [0.8.10](https://github.com/Srlion/morky/compare/v0.8.9...v0.8.10) (2026-07-22)
 
 
