@@ -93,12 +93,37 @@ pub async fn run_cleanup(req: CleanupRequest) -> CleanupResult {
     }
 
     if req.volumes {
-        match podman().args(["volume", "prune", "-f"]).output().await {
-            Ok(o) if !o.status.success() => {
-                errors.push(format!("volumes: {}", String::from_utf8_lossy(&o.stderr)));
+        match podman()
+            .args([
+                "volume",
+                "ls",
+                "--format",
+                "{{.Name}}",
+                "--filter",
+                "dangling=true",
+            ])
+            .output()
+            .await
+        {
+            Ok(o) if o.status.success() => {
+                for name in String::from_utf8_lossy(&o.stdout)
+                    .lines()
+                    .map(str::trim)
+                    .filter(|n| !n.is_empty() && *n != "morky-buildkit.volume")
+                {
+                    if let Ok(r) = podman().args(["volume", "rm", name]).output().await
+                        && !r.status.success()
+                    {
+                        tracing::debug!(
+                            name,
+                            "volume rm skipped: {}",
+                            String::from_utf8_lossy(&r.stderr).trim()
+                        );
+                    }
+                }
             }
+            Ok(o) => errors.push(format!("volumes: {}", String::from_utf8_lossy(&o.stderr))),
             Err(e) => errors.push(format!("volumes: {e}")),
-            _ => {}
         }
     }
 
