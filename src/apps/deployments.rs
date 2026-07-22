@@ -178,19 +178,29 @@ async fn get_log(c: &mut Ctx) {
 async fn deploy_log_ws(c: &mut Ctx) -> Result<(), StatusError> {
     let deploy_id: i64 = c.req.param("deploy_id").unwrap_or(0);
     let existing = Deployment::get_by_id(deploy_id).await.ok();
-    let mut rx = deploy::log_broadcast::subscribe(deploy_id);
+    let rx = deploy::log_broadcast::subscribe(deploy_id);
 
     Ok(c.upgrade_websocket(async move |mut ws| {
-        if let Some(ref d) = existing {
-            let lines = Deployment::get_log_lines(d.id).await.unwrap_or_default();
-            if !lines.is_empty() {
-                let _ = ws.send(serde_json::json!({"t":"bulk","d":lines}).to_string()).await;
-            }
-            if matches!(d.status, DeployStatus::Done | DeployStatus::Failed) {
-                let _ = ws.send(serde_json::json!({"t":"status","d":d.status}).to_string()).await;
-                return;
-            }
+        let mut rx = rx;
+
+        let Some(ref d) = existing else {
+            drop(rx);
+            deploy::log_broadcast::remove_if_unused(deploy_id);
+            return;
+        };
+
+        let lines = Deployment::get_log_lines(d.id).await.unwrap_or_default();
+        if !lines.is_empty() {
+            let _ = ws.send(serde_json::json!({"t":"bulk","d":lines}).to_string()).await;
         }
+
+        if matches!(d.status, DeployStatus::Done | DeployStatus::Failed | DeployStatus::Cancelled) {
+            let _ = ws.send(serde_json::json!({"t":"status","d":d.status}).to_string()).await;
+            drop(rx);
+            deploy::log_broadcast::remove_if_unused(deploy_id);
+            return;
+        }
+
         loop {
             tokio::select! {
                 result = rx.recv() => {
@@ -216,6 +226,9 @@ async fn deploy_log_ws(c: &mut Ctx) -> Result<(), StatusError> {
                 }
             }
         }
+
+        drop(rx);
+        deploy::log_broadcast::remove_if_unused(deploy_id);
     })?)
 }
 

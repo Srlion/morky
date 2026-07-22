@@ -2,6 +2,7 @@ use std::sync::LazyLock;
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering::SeqCst};
 use std::time::Duration;
 
+use futures_util::FutureExt;
 use tokio::sync::{Notify, Semaphore};
 
 use crate::db::conn;
@@ -11,7 +12,6 @@ use super::{JobRow, get_def};
 
 static WAKE: LazyLock<Notify> = LazyLock::new(Notify::new);
 static CPU_SEM: LazyLock<Semaphore> = LazyLock::new(|| Semaphore::new(cpu_limit()));
-
 static RUNNING: AtomicUsize = AtomicUsize::new(0);
 static EXCLUSIVE: AtomicBool = AtomicBool::new(false);
 
@@ -19,8 +19,22 @@ pub fn notify() {
     WAKE.notify_one();
 }
 
+/// Resets the worker flags no matter how the job task exits (ok, err, panic).
+struct RunGuard {
+    exclusive: bool,
+}
+
+impl Drop for RunGuard {
+    fn drop(&mut self) {
+        if self.exclusive {
+            EXCLUSIVE.store(false, SeqCst);
+        }
+        RUNNING.fetch_sub(1, SeqCst);
+        notify();
+    }
+}
+
 pub fn start() {
-    // Mark anything that was running as pending (server crashed mid-job)
     tokio::spawn(async {
         let r = conn()
             .query("UPDATE jobs SET status = 'pending' WHERE status = 'running'")
@@ -33,7 +47,6 @@ pub fn start() {
         }
         notify();
     });
-
     tokio::spawn(poll_loop());
 }
 
@@ -78,7 +91,6 @@ async fn poll_loop() {
             if EXCLUSIVE.load(SeqCst) {
                 break;
             }
-
             // This job is exclusive - wait for everything to finish
             if def.exclusive && RUNNING.load(SeqCst) > 0 {
                 break;
@@ -122,10 +134,17 @@ async fn poll_loop() {
             let attempts = job.attempts + 1;
             let payload = job.payload.clone();
             let run_fn = def.run_fn.clone();
+            let max_retries = def.max_retries;
+            let exclusive = def.exclusive;
+
             tokio::spawn(async move {
                 let _permit = permit;
+                let _guard = RunGuard { exclusive };
 
-                let result = run_fn(payload).await;
+                let result = std::panic::AssertUnwindSafe(run_fn(payload))
+                    .catch_unwind()
+                    .await
+                    .unwrap_or_else(|_| Err("job panicked".to_string()));
 
                 match result {
                     Ok(()) => {
@@ -140,8 +159,8 @@ async fn poll_loop() {
                     }
                     Err(e) => {
                         tracing::error!(id, "job failed: {e}");
-                        if attempts <= def.max_retries {
-                            tracing::info!(id, attempts, def.max_retries, "retrying");
+                        if attempts <= max_retries {
+                            tracing::info!(id, attempts, max_retries, "retrying");
                             let _ = conn()
                                 .query("UPDATE jobs SET status = 'pending', error = ? WHERE id = ?")
                                 .bind(&e)
@@ -161,12 +180,7 @@ async fn poll_loop() {
                         }
                     }
                 }
-
-                if def.exclusive {
-                    EXCLUSIVE.store(false, SeqCst);
-                }
-                RUNNING.fetch_sub(1, SeqCst);
-                notify();
+                // guard drop resets EXCLUSIVE/RUNNING and notifies
             });
         }
 

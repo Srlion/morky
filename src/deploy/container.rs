@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::os::fd::OwnedFd;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};
 
 use maw::CancellationToken;
@@ -11,7 +12,9 @@ use crate::deploy::shell::run_logged;
 use crate::models::{App, ContainerLog, Deployment};
 use crate::{constants, networking};
 
-static TAILERS: LazyLock<Mutex<HashMap<i64, CancellationToken>>> = LazyLock::new(Default::default);
+static TAILERS: LazyLock<Mutex<HashMap<i64, (u64, CancellationToken)>>> =
+    LazyLock::new(Default::default);
+static TAILER_GEN: AtomicU64 = AtomicU64::new(0);
 
 pub fn name(app_id: i64) -> String {
     format!("app-{app_id}")
@@ -104,19 +107,23 @@ pub fn start_log_tailer(app_id: i64, deploy_id: i64) {
     if tailers.contains_key(&app_id) {
         return;
     }
-
+    let generation = TAILER_GEN.fetch_add(1, Ordering::Relaxed);
     let token = CancellationToken::new();
-    tailers.insert(app_id, token.clone());
+    tailers.insert(app_id, (generation, token.clone()));
+    drop(tailers);
 
     tokio::spawn(async move {
         log_marker(deploy_id, "--- container started ---").await;
-
         tail_logs(app_id, deploy_id, token)
             .await
             .log_err("log tailer failed");
-
         log_marker(deploy_id, "--- container stopped ---").await;
-        TAILERS.lock().unwrap().remove(&app_id);
+
+        // remove only our own entry, never a successor's
+        let mut t = TAILERS.lock().unwrap();
+        if t.get(&app_id).map(|(g, _)| *g) == Some(generation) {
+            t.remove(&app_id);
+        }
     });
 }
 
@@ -147,7 +154,7 @@ async fn tail_logs(app_id: i64, deploy_id: i64, token: CancellationToken) -> std
 }
 
 pub async fn stop_log_tailer(app_id: i64, _deploy_id: Option<i64>) {
-    let token = TAILERS.lock().unwrap().remove(&app_id);
+    let token = TAILERS.lock().unwrap().remove(&app_id).map(|(_, t)| t);
     if let Some(t) = token {
         t.cancel();
     }

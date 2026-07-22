@@ -31,4 +31,5 @@ pub(super) async fn fail_deploy(app_id: i64, deploy_id: i64, error: &str) {
     }
 
     log_broadcast::send_status(deploy_id, DeployStatus::Failed);
+    log_broadcast::remove(deploy_id);
 }

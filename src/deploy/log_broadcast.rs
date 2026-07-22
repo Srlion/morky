@@ -34,3 +34,12 @@ pub async fn append_log(id: i64, line: &str) {
 pub fn send_status(id: i64, status: DeployStatus) {
     broadcast(id, &format!("\x01STATUS:{status}"));
 }
+
+pub fn remove_if_unused(id: i64) {
+    let mut ch = CH.lock().unwrap();
+    if let Some(tx) = ch.get(&id)
+        && tx.receiver_count() == 0
+    {
+        ch.remove(&id);
+    }
+}
