@@ -201,36 +201,26 @@ async fn backup_volumes(apps: &[i64]) -> Result<(), String> {
         .await
         .map_err(|e| format!("mkdir volumes: {e}"))?;
 
+    let data_dir = crate::constants::morky_data_dir();
     for app_id in apps {
-        let container_name = format!("app-{app_id}");
-        let volumes = get_container_volumes(&container_name).await;
-        if volumes.is_empty() {
+        let src = format!("{data_dir}/volumes/app-{app_id}");
+        if !Path::new(&src).exists() {
             continue;
         }
-
-        let app_vol_dir = format!("{volumes_dir}/{container_name}");
-        fs::create_dir_all(&app_vol_dir)
+        let dest = format!("{volumes_dir}/app-{app_id}.tar.gz");
+        let o = Command::new("tar")
+            .args(["-czf", &dest, "-C", &src, "."])
+            .output()
             .await
-            .map_err(|e| format!("mkdir {container_name}: {e}"))?;
-
-        for vol in &volumes {
-            let tar_name = format!("{}/{}.tar.gz", app_vol_dir, sanitize_vol_name(vol));
-            let o = podman()
-                .args(["volume", "export", vol, "--output", &tar_name])
-                .output()
-                .await
-                .map_err(|e| format!("export volume {vol}: {e}"))?;
-
-            if !o.status.success() {
-                tracing::warn!(
-                    vol,
-                    "volume export failed: {}",
-                    String::from_utf8_lossy(&o.stderr)
-                );
-            }
+            .map_err(|e| format!("tar volume app-{app_id}: {e}"))?;
+        if !o.status.success() {
+            tracing::warn!(
+                app_id,
+                "volume backup failed: {}",
+                String::from_utf8_lossy(&o.stderr)
+            );
         }
     }
-
     Ok(())
 }
 
@@ -241,38 +231,4 @@ async fn is_container_running(name: &str) -> bool {
         .await
         .map(|o| String::from_utf8_lossy(&o.stdout).trim() == "true")
         .unwrap_or(false)
-}
-
-async fn get_container_volumes(container_name: &str) -> Vec<String> {
-    let o = match podman()
-        .args([
-            "inspect",
-            "--format",
-            "{{range .Mounts}}{{if eq .Type \"volume\"}}{{.Name}}\n{{end}}{{end}}",
-            container_name,
-        ])
-        .output()
-        .await
-    {
-        Ok(o) if o.status.success() => o,
-        _ => return vec![],
-    };
-
-    String::from_utf8_lossy(&o.stdout)
-        .lines()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect()
-}
-
-fn sanitize_vol_name(name: &str) -> String {
-    name.chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '_'
-            }
-        })
-        .collect()
 }

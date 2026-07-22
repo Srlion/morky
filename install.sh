@@ -145,8 +145,6 @@ if [[ "$HAS_SUDO" == true ]]; then
     
     run "user lingering" sudo loginctl enable-linger "$SERVICE_USER"
     run "podman socket" ctl enable --now podman.socket
-else
-    echo "(no sudo - skipping podman, sysctl, linger)"
 fi
 
 mkdir -p "$DATA_DIR/haproxy" "$QUADLET_DIR"
@@ -178,17 +176,17 @@ if [[ -n "$RESTORE_FILE" ]]; then
     
     run "extracting backup" tar -xzf "$RESTORE_FILE" -C "$RESTORE_TMP"
     
-    run "restoring database" cp "$RESTORE_TMP/database.db" "$DATA_DIR/database.db"
+    mkdir -p "$DATA_DIR/data"
+    run "restoring database" cp "$RESTORE_TMP/database.db" "$DATA_DIR/data/db-sqlite.db"
     
     if [[ -d "$RESTORE_TMP/volumes" ]]; then
-        for app_dir in "$RESTORE_TMP/volumes"/*/; do
-            [[ -d "$app_dir" ]] || continue
-            for vol_tar in "$app_dir"*.tar.gz; do
-                [[ -f "$vol_tar" ]] || continue
-                vol_name=$(basename "$vol_tar" .tar.gz)
-                podman volume create "$vol_name" 2>/dev/null || true
-                run "restoring volume $vol_name" podman volume import "$vol_name" "$vol_tar"
-            done
+        for vol_tar in "$RESTORE_TMP/volumes"/app-*.tar.gz; do
+            [[ -f "$vol_tar" ]] || continue
+            app_name=$(basename "$vol_tar" .tar.gz)
+            dest="$DATA_DIR/volumes/$app_name"
+            rm -rf "$dest"
+            mkdir -p "$dest"
+            run "restoring volume $app_name" podman unshare tar -xzf "$vol_tar" -C "$dest"
         done
     fi
     
