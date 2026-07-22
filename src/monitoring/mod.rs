@@ -36,7 +36,6 @@ pub fn routes() -> Router {
         .get("/stats", stats_handler)
         .get("/processes", processes_handler)
         .get("/podman-disk", podman_disk_handler)
-        .get("/mem-debug", mem_debug_handler)
         .push(cleanup::routes())
 }
 
@@ -279,24 +278,4 @@ async fn podman_disk_handler(c: &mut Ctx) {
         "podman": podman_data,
         "buildkit_bytes": buildkit_bytes,
     }));
-}
-
-async fn mem_debug_handler(c: &mut Ctx) {
-    let metrics = tokio::runtime::Handle::current().metrics();
-    c.res.json(serde_json::json!({
-        "globals": crate::globals::debug_stats(),
-        "log_broadcast": crate::deploy::log_broadcast::debug_stats(),
-        "cancel_tokens": crate::deploy::debug_cancel_len(),
-        "tailers": crate::deploy::container::debug_tailers(),
-        "tokio_alive_tasks": metrics.num_alive_tasks(),
-        "rss_mb": read_rss_mb(),
-    }));
-}
-
-fn read_rss_mb() -> f64 {
-    std::fs::read_to_string("/proc/self/statm")
-        .ok()
-        .and_then(|s| s.split_whitespace().nth(1)?.parse::<f64>().ok())
-        .map(|pages| pages * 4096.0 / 1_048_576.0)
-        .unwrap_or(0.0)
 }

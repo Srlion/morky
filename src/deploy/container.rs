@@ -168,7 +168,3 @@ fn parse_log_line(line: &str) -> (i64, &str) {
     }
     (chrono::Utc::now().timestamp(), line)
 }
-
-pub fn debug_tailers() -> Vec<i64> {
-    TAILERS.lock().unwrap().keys().copied().collect()
-}

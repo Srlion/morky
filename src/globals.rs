@@ -67,10 +67,3 @@ pub async fn sse_handler(c: &mut Ctx) {
         }
     });
 }
-
-pub fn debug_stats() -> serde_json::Value {
-    json!({
-        "keys": GLOBALS.state.len(),
-        "sse_receivers": GLOBALS.tx.receiver_count(),
-    })
-}
