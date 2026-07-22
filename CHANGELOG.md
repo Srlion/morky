@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.7](https://github.com/Srlion/morky/compare/v0.8.6...v0.8.7) (2026-07-22)
+
+
+### Bug Fixes
+
+* actually fix deploying ([4d7eca9](https://github.com/Srlion/morky/commit/4d7eca90a22981afa3b171d6d60b1ceb2845beaa))
+
 ## [0.8.6](https://github.com/Srlion/morky/compare/v0.8.5...v0.8.6) (2026-07-22)
 
 
