@@ -37,3 +37,7 @@ where
     remove(deploy_id);
     result?
 }
+
+pub fn debug_len() -> usize {
+    TOKENS.lock().unwrap().len()
+}

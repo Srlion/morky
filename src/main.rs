@@ -33,8 +33,9 @@ pub use tokio_handle::tokio_handle;
 
 use crate::models::Settings;
 
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+// TODO: re-enable after mem investigation
+// #[global_allocator]
+// static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(rust_embed::RustEmbed)]
 #[folder = "frontend/dist/"]

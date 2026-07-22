@@ -74,4 +74,8 @@ impl<K: Eq + Hash + Send + 'static, V: Send + 'static> TtlMap<K, V> {
     pub fn remove(&self, k: &K) {
         self.inner.lock().unwrap().remove(k);
     }
+
+    pub fn len(&self) -> usize {
+        self.inner.lock().unwrap().len()
+    }
 }

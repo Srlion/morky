@@ -43,3 +43,12 @@ pub fn remove_if_unused(id: i64) {
         ch.remove(&id);
     }
 }
+
+pub fn debug_stats() -> serde_json::Value {
+    let ch = CH.lock().unwrap();
+    serde_json::json!({
+        "channels": ch.len(),
+        "receivers": ch.values().map(|tx| tx.receiver_count()).sum::<usize>(),
+        "ids": ch.keys().copied().collect::<Vec<i64>>(),
+    })
+}

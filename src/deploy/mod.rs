@@ -20,3 +20,7 @@ pub async fn init() {
 pub fn cancel_deploy(deploy_id: i64) {
     cancel_registry::cancel(deploy_id);
 }
+
+pub fn debug_cancel_len() -> usize {
+    cancel_registry::debug_len()
+}
