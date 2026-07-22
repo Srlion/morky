@@ -30,7 +30,8 @@ pub fn inject_env(user_env: &HashMap<String, String>, mode: EnvMode) -> Vec<Stri
 
 pub fn secrets_hash(env_vars: &HashMap<String, String>) -> String {
     let mut h = Sha256::new();
-    for (k, v) in env_vars {
+    let sorted: std::collections::BTreeMap<_, _> = env_vars.iter().collect();
+    for (k, v) in sorted {
         h.update(format!("{k}={v}\n"));
     }
     hex::encode(h.finalize().as_slice())
