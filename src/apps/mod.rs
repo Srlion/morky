@@ -188,7 +188,7 @@ async fn save_settings(c: &mut Ctx) {
         .map(str::trim)
         .filter(|s| !s.is_empty())
         .unwrap_or("Dockerfile");
-    let port = body.port.unwrap_or(3000).max(1).min(65535);
+    let port = body.port.unwrap_or(3000).clamp(1, 65535);
     let hc = body
         .health_check_path
         .as_deref()
