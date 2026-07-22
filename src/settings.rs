@@ -1,4 +1,4 @@
-use crate::models::{Settings, User};
+use crate::models::{Session, Settings, User};
 use argon2::{
     Argon2, PasswordHash, PasswordHasher, PasswordVerifier,
     password_hash::{SaltString, rand_core::OsRng},
@@ -144,7 +144,11 @@ async fn change_password(c: &mut Ctx) {
     };
 
     match User::update_password(user.id, &hash).await {
-        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
+        Ok(_) => {
+            let keep = c.session.get::<String>("sid").ok();
+            let _ = Session::delete_for_user_except(user.id, keep.as_deref()).await;
+            c.res.json(serde_json::json!({"ok": true}))
+        }
         Err(e) => c
             .res
             .status(StatusCode::INTERNAL_SERVER_ERROR)

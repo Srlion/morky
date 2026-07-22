@@ -72,4 +72,14 @@ impl Session {
             .await
             .map(|r| r.rows_affected())
     }
+
+    pub async fn delete_for_user_except(user_id: i64, keep: Option<&str>) -> db::Result<u64> {
+        conn()
+            .query("DELETE FROM sessions WHERE user_id = ? AND id != ?")
+            .bind(user_id)
+            .bind(keep.unwrap_or(""))
+            .execute()
+            .await
+            .map(|r| r.rows_affected())
+    }
 }
