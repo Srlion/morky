@@ -64,7 +64,7 @@ async fn poll_loop() {
         if jobs.is_empty() {
             tokio::select! {
                 _ = WAKE.notified() => {}
-                _ = tokio::time::sleep(Duration::from_secs(5)) => {}
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {}
             }
             continue;
         }
