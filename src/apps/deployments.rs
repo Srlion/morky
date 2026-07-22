@@ -44,6 +44,18 @@ pub fn routes() -> Router {
         .get("/{deploy_id}/container-log", get_container_log)
 }
 
+async fn load_owned(c: &mut Ctx) -> Option<Deployment> {
+    let app_id = c.req.param::<i64>("app_id").ok()?;
+    let deploy_id = c.req.param::<i64>("deploy_id").ok()?;
+    match Deployment::get_by_id(deploy_id).await {
+        Ok(d) if d.app_id == app_id => Some(d),
+        _ => {
+            not_found(c);
+            None
+        }
+    }
+}
+
 fn bad(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::BAD_REQUEST)
@@ -131,91 +143,66 @@ async fn list_deployments(c: &mut Ctx) {
 }
 
 async fn get_deployment(c: &mut Ctx) {
-    let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return bad(c, "invalid id");
+    let Some(d) = load_owned(c).await else {
+        return;
     };
-    match Deployment::get_by_id(deploy_id).await {
-        Ok(d) => c.res.json(&d),
-        _ => not_found(c),
-    }
+    c.res.json(&d);
 }
 
 async fn cancel_deploy(c: &mut Ctx) {
-    let Ok(app_id) = c.req.param::<i64>("app_id") else {
-        return bad(c, "invalid id");
-    };
-    let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return bad(c, "invalid deploy id");
-    };
-    let d = match Deployment::get_by_id(deploy_id).await {
-        Ok(d) if d.app_id == app_id => d,
-        _ => return not_found(c),
+    let Some(d) = load_owned(c).await else {
+        return;
     };
     if !matches!(d.status, DeployStatus::Building) {
         return bad(c, "deployment is not building");
     }
-    deploy::cancel_deploy(deploy_id);
+    deploy::cancel_deploy(d.id);
     c.res.json(serde_json::json!({"ok": true}));
 }
 
 async fn get_log(c: &mut Ctx) {
-    let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return c.res.json(serde_json::json!({"lines":[],"status":""}));
+    let Some(d) = load_owned(c).await else {
+        return;
     };
-    let status = Deployment::get_by_id(deploy_id)
-        .await
-        .map(|d| d.status)
-        .ok();
-    let lines = Deployment::get_log_lines(deploy_id)
-        .await
-        .unwrap_or_default();
-
+    let lines = Deployment::get_log_lines(d.id).await.unwrap_or_default();
     c.res.json(serde_json::json!({
         "lines": lines,
-        "status": status,
+        "status": d.status,
     }));
 }
 
 async fn deploy_log_ws(c: &mut Ctx) -> Result<(), StatusError> {
-    let deploy_id: i64 = c.req.param("deploy_id").unwrap_or(0);
-    let existing = Deployment::get_by_id(deploy_id).await.ok();
+    let Some(d) = load_owned(c).await else {
+        return Ok(());
+    };
+    let deploy_id = d.id;
     let rx = deploy::log_broadcast::subscribe(deploy_id);
-
     Ok(c.upgrade_websocket(async move |mut ws| {
         let mut rx = rx;
-
-        let Some(ref d) = existing else {
-            drop(rx);
-            deploy::log_broadcast::remove_if_unused(deploy_id);
-            return;
-        };
-
-        let lines = Deployment::get_log_lines(d.id).await.unwrap_or_default();
+        let lines = Deployment::get_log_lines(deploy_id).await.unwrap_or_default();
         if !lines.is_empty() {
-            let _ = ws.send(serde_json::json!({"t":"bulk","d":lines}).to_string()).await;
+            let _ = ws.send(serde_json::json!({"t": "bulk", "d": lines}).to_string()).await;
         }
-
-        if matches!(d.status, DeployStatus::Done | DeployStatus::Failed | DeployStatus::Cancelled) {
-            let _ = ws.send(serde_json::json!({"t":"status","d":d.status}).to_string()).await;
+        if matches!(d.status, DeployStatus::Done | DeployStatus::Failed | DeployStatus::Cancelled | DeployStatus::Superseded) {
+            let _ = ws.send(serde_json::json!({"t": "status", "d": d.status}).to_string()).await;
             drop(rx);
             deploy::log_broadcast::remove_if_unused(deploy_id);
             return;
         }
-
         loop {
             tokio::select! {
                 result = rx.recv() => {
                     match result {
                         Ok(line) => {
                             if let Some(status) = line.strip_prefix("\x01STATUS:") {
-                                let _ = ws.send(serde_json::json!({"t":"status","d":status}).to_string()).await;
+                                let _ = ws.send(serde_json::json!({"t": "status", "d": status}).to_string()).await;
                                 break;
                             }
-                            let _ = ws.send(serde_json::json!({"t":"line","d":line}).to_string()).await;
+                            let _ = ws.send(serde_json::json!({"t": "line", "d": line}).to_string()).await;
                         }
                         Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                         Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                            let _ = ws.send(serde_json::json!({"t":"line","d":format!("(skipped {n} lines)")}).to_string()).await;
+                            let _ = ws.send(serde_json::json!({"t": "line", "d": format!("(skipped {n} lines)")}).to_string()).await;
                         }
                     }
                 }
@@ -246,8 +233,8 @@ fn default_log_limit() -> i64 {
 }
 
 async fn get_container_log(c: &mut Ctx) {
-    let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return bad(c, "invalid id");
+    let Some(d) = load_owned(c).await else {
+        return;
     };
     let q = c
         .req
@@ -257,10 +244,10 @@ async fn get_container_log(c: &mut Ctx) {
             limit: 500,
         });
     let limit = q.limit.max(1);
-    let total = ContainerLog::count(deploy_id).await.unwrap_or(0);
+    let total = ContainerLog::count(d.id).await.unwrap_or(0);
 
     // Fetch newest first, then reverse so display is chronological (newest at bottom)
-    let mut lines = ContainerLog::get_lines_desc(deploy_id, q.offset, limit)
+    let mut lines = ContainerLog::get_lines_desc(d.id, q.offset, limit)
         .await
         .unwrap_or_default();
     lines.reverse();
