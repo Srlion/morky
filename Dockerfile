@@ -45,6 +45,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 FROM runtime-base
 COPY --from=builder /usr/local/bin/morky /usr/local/bin/morky
+RUN mkdir -p /etc/containers && \
+    printf '{"default":[{"type":"insecureAcceptAnything"}]}\n' > /etc/containers/policy.json
 ENV MORKY_DATA_DIR=/data
 ENV PODMAN_SOCKET=/run/podman/podman.sock
 ENTRYPOINT ["morky"]
