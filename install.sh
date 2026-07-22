@@ -125,6 +125,7 @@ if [[ -z "$TAG" ]]; then
     else
         TAG=$(get_latest_tag)
         TAG="${TAG#v}"
+        [[ -n "$TAG" ]] || { echo "Failed to determine latest release tag"; exit 1; }
     fi
 fi
 
