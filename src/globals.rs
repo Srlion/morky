@@ -47,8 +47,8 @@ impl Globals {
 }
 
 pub async fn sse_handler(c: &mut Ctx) {
-    let snapshot = GLOBALS.snapshot();
     let mut rx = GLOBALS.subscribe();
+    let snapshot = GLOBALS.snapshot();
 
     let init = format!("data: {}\n\n", json!({ "snapshot": snapshot }));
 
