@@ -20,11 +20,6 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Bump Cargo.toml version
-              run: |
-                  VERSION="${GITHUB_REF_NAME#v}"
-                  sed -i '/^\[package\]/,/^\[/{s/^version = ".*"/version = "'"$VERSION"'"/}' Cargo.toml
-
             - name: Log in to GHCR
               uses: docker/login-action@v4
               with:
