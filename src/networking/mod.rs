@@ -65,9 +65,8 @@ async fn reconcile() -> std::io::Result<()> {
     let rows: Vec<(i64, i64, String, i64)> = crate::db::conn()
         .query_as(
             "SELECT a.id, a.project_id, a.domain, d.port
-               FROM apps a
-               JOIN deployments d ON d.id = a.current_deployment_id
-              WHERE a.domain IS NOT NULL AND a.domain != ''",
+           FROM apps a JOIN deployments d ON d.id = a.current_deployment_id
+          WHERE a.domain IS NOT NULL AND a.domain != ''",
         )
         .fetch_all()
         .await
@@ -103,37 +102,24 @@ async fn reconcile() -> std::io::Result<()> {
         }
     }
 
-    let routes = load_routes().await;
+    let routes = build_routes(rows).await;
     routes::save(&routes).await?;
     haproxy::write_config(&routes).await?;
     haproxy::write_map(&routes).await?;
     haproxy::reload().await
 }
 
-async fn load_routes() -> Vec<Route> {
-    let rows: Vec<(i64, i64, String, i64)> = crate::db::conn()
-        .query_as(
-            "SELECT a.id, a.project_id, a.domain, d.port
-               FROM apps a
-               JOIN deployments d ON d.id = a.current_deployment_id
-              WHERE a.domain IS NOT NULL AND a.domain != ''",
-        )
-        .fetch_all()
-        .await
-        .unwrap_or_default();
-
-    let mut routes: Vec<Route> = Vec::new();
-    for (app_id, project_id, domain, port) in rows {
-        let container = container_name(app_id);
-        routes.push(Route {
+async fn build_routes(rows: Vec<(i64, i64, String, i64)>) -> Vec<Route> {
+    let mut routes: Vec<Route> = rows
+        .into_iter()
+        .map(|(app_id, project_id, domain, port)| Route {
             project_id,
             app_id,
             domain: domain.to_lowercase(),
-            backend_host: container,
+            backend_host: container_name(app_id),
             port: port as u16,
-        });
-    }
-
+        })
+        .collect();
     if let Ok(settings) = Settings::get()
         && let Some(d) = settings
             .panel_domain
