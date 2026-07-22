@@ -101,22 +101,23 @@ async fn list_deployments(c: &mut Ctx) {
         .await
         .unwrap_or_default();
 
-    let checks = deployments.iter().map(|d| async move {
-        podman()
-            .args(["image", "exists", &d.image_tag()])
-            .status()
-            .await
-            .map(|s| s.success())
-            .unwrap_or(false)
-    });
-    let image_exists: Vec<bool> = futures_util::future::join_all(checks).await;
+    let images: std::collections::HashSet<String> = podman()
+        .args(["images", "--format", "{{.Repository}}:{{.Tag}}"])
+        .output()
+        .await
+        .map(|o| {
+            String::from_utf8_lossy(&o.stdout)
+                .lines()
+                .map(|l| l.trim().trim_start_matches("localhost/").to_string())
+                .collect()
+        })
+        .unwrap_or_default();
 
     let items: Vec<serde_json::Value> = deployments
         .iter()
-        .zip(image_exists)
-        .map(|(d, exists)| {
+        .map(|d| {
             let mut v = serde_json::to_value(d).unwrap();
-            v["image_exists"] = serde_json::json!(exists);
+            v["image_exists"] = serde_json::json!(images.contains(&d.image_tag()));
             v
         })
         .collect();
