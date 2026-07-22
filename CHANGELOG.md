@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.8.6](https://github.com/Srlion/morky/compare/v0.8.5...v0.8.6) (2026-07-22)
+
+
+### Bug Fixes
+
+* bump version correctly ([94d21f8](https://github.com/Srlion/morky/commit/94d21f8fccf50608bbded599a169bff487b27800))
+* fix backups not working correctly ([af6325e](https://github.com/Srlion/morky/commit/af6325e086b90e611905cbdec85d774dc06b20c6))
+* fix deploying failing at the end ([82b599f](https://github.com/Srlion/morky/commit/82b599fc8d4b4ca44e21ca9b713a97c6306ff112))
+* fix release-please failing ([56a8717](https://github.com/Srlion/morky/commit/56a87173366d27796f00244675a8cd252963e768))
+
 ## [0.8.5](https://github.com/Srlion/morky/compare/v0.8.4...v0.8.5) (2026-07-22)
 
 
