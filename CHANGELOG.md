@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.12](https://github.com/Srlion/morky/compare/v0.8.11...v0.8.12) (2026-07-22)
+
+
+### Bug Fixes
+
+* add the mnissing SUPERSEDED status to DeployStatus and update deployment status checks ([6945089](https://github.com/Srlion/morky/commit/6945089822d496e05548cef58dceebbda0509c1b))
+
 ## [0.8.11](https://github.com/Srlion/morky/compare/v0.8.10...v0.8.11) (2026-07-22)
 
 
