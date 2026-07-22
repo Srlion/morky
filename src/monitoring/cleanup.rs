@@ -243,7 +243,7 @@ async fn run_handler(c: &mut Ctx) {
     let req: CleanupRequest = match c.req.json().await {
         Ok(r) => r,
         Err(e) => {
-            c.res.status(StatusCode::INTERNAL_SERVER_ERROR);
+            c.res.status(StatusCode::BAD_REQUEST);
             c.res.json(serde_json::json!({ "error": e.to_string() }));
             return;
         }
