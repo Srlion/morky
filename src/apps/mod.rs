@@ -336,10 +336,8 @@ async fn rollback_action(c: &mut Ctx) {
     let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
         return bad(c, "invalid deploy id");
     };
-    let ok = matches!(
-        Deployment::get_by_id(deploy_id).await,
-        Ok(d) if d.status == DeployStatus::Done && d.app_id == app_id
-    );
+    let ok = matches!(Deployment::get_by_id(deploy_id).await,
+        Ok(d) if matches!(d.status, DeployStatus::Done | DeployStatus::Superseded) && d.app_id == app_id);
     if !ok {
         return bad(c, "cannot rollback to this deployment");
     }
