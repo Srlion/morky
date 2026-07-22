@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.4](https://github.com/Srlion/morky/compare/v0.8.3...v0.8.4) (2026-07-22)
+
+
+### Bug Fixes
+
+* add CONTAINERS_POLICY_JSON environment variable to service configuration ([2643570](https://github.com/Srlion/morky/commit/264357056bbf8a965242c8183350fd346d9704e3))
+
 ## [0.8.3](https://github.com/Srlion/morky/compare/v0.8.2...v0.8.3) (2026-07-22)
 
 
