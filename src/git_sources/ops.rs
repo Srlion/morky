@@ -36,6 +36,7 @@ pub async fn head_commit(repo_dir: &str) -> Result<CommitInfo, String> {
 async fn run_cmd(cmd: &str, args: &[&str], cwd: &str) -> Result<(), String> {
     let o = Command::new(cmd)
         .args(args)
+        .kill_on_drop(true)
         .current_dir(cwd)
         .output()
         .await
@@ -52,6 +53,7 @@ async fn run_cmd(cmd: &str, args: &[&str], cwd: &str) -> Result<(), String> {
 async fn cmd_stdout(cmd: &str, args: &[&str], cwd: &str) -> Result<String, String> {
     let o = Command::new(cmd)
         .args(args)
+        .kill_on_drop(true)
         .current_dir(cwd)
         .output()
         .await

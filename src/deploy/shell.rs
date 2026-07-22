@@ -39,6 +39,7 @@ pub async fn run_logged_with_env(
         .current_dir(cwd)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
+        .kill_on_drop(true)
         .envs(env);
 
     let mut child = command.spawn().map_err(|e| format!("spawn `{cmd}`: {e}"))?;
