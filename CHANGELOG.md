@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.8.8](https://github.com/Srlion/morky/compare/v0.8.7...v0.8.8) (2026-07-22)
+
+
+### Bug Fixes
+
+* add delete_for_user_except method to Session model and integrate it into password change ([ab2c087](https://github.com/Srlion/morky/commit/ab2c08797fff1fcd2f406ba1323ff0dec4c076fd))
+* add missing Superseded status to DeployStatus enum ([3ee4a9d](https://github.com/Srlion/morky/commit/3ee4a9db2c77cd336fc01f967490fc12efe16af2))
+* add unique index for port in apps table to prevent duplicates ([214ac7d](https://github.com/Srlion/morky/commit/214ac7da82c24c0bfbbd7ab4ec173ea6e62725cf))
+* avoid port collision with panel value in next_available_port function ([6fbfd31](https://github.com/Srlion/morky/commit/6fbfd3121657dce73f02d84bc13ec9d92d053620))
+* change error response status from 500 to 400 for invalid JSON requests ([c965aae](https://github.com/Srlion/morky/commit/c965aae06184d1b8c750fbc54e364706e19824ad))
+* cleanup volume.rs ([3b1bd3e](https://github.com/Srlion/morky/commit/3b1bd3ed714df5b9489532ba2161e60270c9c4a5))
+* deploy status model (superseded/cancelled) + rollback check ([7c5ef04](https://github.com/Srlion/morky/commit/7c5ef043ba90d2763677d6742338052a9e7cbf22))
+* enable kill_on_drop for command execution for safety ([78c9189](https://github.com/Srlion/morky/commit/78c91892dcd893d9066a73099c0768bd866b20e9))
+* enhance app deletion process by stopping containers, removing images, and cleaning up volumes ([da35979](https://github.com/Srlion/morky/commit/da359790ec8a49656066f5f6eefee038b7c2de1e))
+* enhance HTTP client configuration with connect and request timeouts ([60d4755](https://github.com/Srlion/morky/commit/60d4755d24fa86b09803ca0af077a4578daed888))
+* fix set_current_deployment updating logic ([8c70545](https://github.com/Srlion/morky/commit/8c705450896661fc8ef0f3a8612001608a915331))
+* handle build cancellation correctly ([cfbe46e](https://github.com/Srlion/morky/commit/cfbe46ed41b098e1f3f4aa9b6f0b55ec0a4c4a7e))
+* implement periodic cleanup of expired sessions in main function ([28ed501](https://github.com/Srlion/morky/commit/28ed501625d356fec97fe3a79b31b9940db249ba))
+* improve error handling for buildkit initialization ([788f501](https://github.com/Srlion/morky/commit/788f501c80b9fc44fb6da346785b21a96ca34b15))
+* optimize image existence check in list_deployments function ([f8e6fbf](https://github.com/Srlion/morky/commit/f8e6fbffaf8a31068ea35e077108a45537306530))
+* redact sensitive information in command logging ([0dc3f8b](https://github.com/Srlion/morky/commit/0dc3f8bd292b0cd543b62ab54a95e97240969185))
+* reduce sleep duration in poll loop from 5 seconds to 1 second ([88a90b7](https://github.com/Srlion/morky/commit/88a90b7a004338b65c967dbfa3b34f43e24f4da2))
+* refactor deployment retrieval logic to improve error handling and reduce code duplication ([e920f28](https://github.com/Srlion/morky/commit/e920f28ca881832a37beea07cb10ce8ae42a5587))
+* refactor reconcile function to build routes directly from database query results ([ab47224](https://github.com/Srlion/morky/commit/ab47224c53bb26aff0e0bae0d64ad2f6f5592e50))
+* reorder snapshot retrieval in sse_handler ([0d2b0cf](https://github.com/Srlion/morky/commit/0d2b0cf865fb7d3ea56e245e3a1ec4785520ef2e))
+* replace direct file write with write_secret_file in auto_setup and constants ([0a7eb3a](https://github.com/Srlion/morky/commit/0a7eb3a9f07d21e6f697dde4bc4691c82d7cbf09))
+* secrets_hash determinism ([3660b97](https://github.com/Srlion/morky/commit/3660b97c6ff232fa01a176d36e376d5488908389))
+* update UpdateBody struct to support nested option for panel_domain and improve domain validation logic ([f4f2353](https://github.com/Srlion/morky/commit/f4f23539449c37a58cee38abb02f53b9150d67b8))
+* update volume cleanup logic to remove dangling volumes and skip specific ones ([3df632b](https://github.com/Srlion/morky/commit/3df632b4311f6e12dc2c8735203291acd32645b8))
+
 ## [0.8.7](https://github.com/Srlion/morky/compare/v0.8.6...v0.8.7) (2026-07-22)
 
 
