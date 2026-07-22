@@ -25,7 +25,6 @@ PublishPort=9764:9764
 
 [Service]
 Environment=CONTAINERS_CONF=/opt/podman/etc/containers/containers.conf
-Environment=CONTAINERS_POLICY_JSON=/opt/podman/etc/containers/policy.json
 Restart=always
 RestartSec=5
 

@@ -138,6 +138,11 @@ fi
 if [[ "$HAS_SUDO" == true ]]; then
     run "podman" bash -c 'curl -fsSL https://github.com/srlion/podman-static/raw/main/install.sh | bash'
     
+    run "containers policy" bash -c "
+        sudo mkdir -p /etc/containers
+        printf '{\"default\":[{\"type\":\"insecureAcceptAnything\"}]}\n' | sudo tee /etc/containers/policy.json >/dev/null
+    "
+
     run "unprivileged port 80" bash -c "
         echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee /etc/sysctl.d/99-morky.conf >/dev/null
         sudo sysctl -q --system
