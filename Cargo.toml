@@ -8,10 +8,14 @@ anyhow = { version = "1.0.102", features = ["backtrace"] }
 argon2 = "0.5.3"
 async-stream = "0.3.6"
 bytes = "1.11.1"
-chrono = { version = "0.4.44", default-features = false, features = [
-  "serde",
-  "std",
-] }
+chrono = {
+  version = "0.4.44",
+  default-features = false,
+  features = [
+    "serde",
+    "std",
+  ]
+}
 form_urlencoded = "1.2.2"
 futures-util = "0.3.32"
 http = "1.4.0"
@@ -23,27 +27,31 @@ nix = { version = "0.31.2", features = ["fs"] }
 num_cpus = "1.17.0"
 rand = "0.10.1"
 regex = "1.12.3"
-reqwest = { version = "0.13.2", default-features = false, features = [
-  "blocking",
-  "form",
-  "http2",
-  "json",
-  "native-tls",
-  "query",
-] }
-rusqlite = { version = "0.39.0", features = [
-  "bundled",
-  "cache",
-  "chrono",
-  "hooks",
-  "serde_json",
-  "uuid"
-] }
+reqwest = {
+  version = "0.13.2",
+  default-features = false,
+  features = [
+    "blocking",
+    "form",
+    "http2",
+    "json",
+    "native-tls",
+    "query",
+  ]
+}
+rusqlite = {
+  version = "0.39.0",
+  features = ["bundled", "cache", "chrono", "hooks", "serde_json", "uuid"]
+}
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-serde_with = { version = "3.18.0", default-features = false, features = [
-  "macros",
-] }
+serde_with = {
+  version = "3.18.0",
+  default-features = false,
+  features = [
+    "macros",
+  ]
+}
 sha2 = "0.11.0"
 sysinfo = "0.38.4"
 tokio = { version = "1.52.1", features = ["full"] }
