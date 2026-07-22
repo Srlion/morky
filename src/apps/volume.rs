@@ -57,19 +57,19 @@ fn guard_stopped(status: AppStatus) -> bool {
 fn bad(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::BAD_REQUEST)
-        .json(&serde_json::json!({ "error": msg }));
+        .json(serde_json::json!({ "error": msg }));
 }
 
 fn forbidden(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::FORBIDDEN)
-        .json(&serde_json::json!({ "error": msg }));
+        .json(serde_json::json!({ "error": msg }));
 }
 
 fn not_found(c: &mut Ctx) {
     c.res
         .status(StatusCode::NOT_FOUND)
-        .json(&serde_json::json!({ "error": "not found" }));
+        .json(serde_json::json!({ "error": "not found" }));
 }
 
 macro_rules! resolve_root {
@@ -106,13 +106,13 @@ async fn list_files(c: &mut Ctx) {
         Err(e) => return bad(c, e),
     };
 
-    if !dir.exists() {
-        if let Err(e) = tokio::fs::create_dir_all(&dir).await {
-            c.res
-                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({ "error": e.to_string() }));
-            return;
-        }
+    if !dir.exists()
+        && let Err(e) = tokio::fs::create_dir_all(&dir).await
+    {
+        c.res
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .json(serde_json::json!({ "error": e.to_string() }));
+        return;
     }
 
     let mut entries = Vec::new();
@@ -145,7 +145,7 @@ async fn list_files(c: &mut Ctx) {
         )
     });
 
-    c.res.json(&serde_json::json!({ "entries": entries }));
+    c.res.json(serde_json::json!({ "entries": entries }));
 }
 
 async fn download_file(c: &mut Ctx) {
@@ -174,7 +174,7 @@ async fn download_file(c: &mut Ctx) {
     if f.read_to_end(&mut buf).await.is_err() {
         c.res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({ "error": "read failed" }));
+            .json(serde_json::json!({ "error": "read failed" }));
         return;
     }
 
@@ -241,14 +241,14 @@ async fn upload_file(c: &mut Ctx) {
             tracing::error!("write failed: {e} | dest: {:?}", dest);
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "write failed"}));
+                .json(serde_json::json!({"error": "write failed"}));
             return;
         }
         saved += 1;
     }
 
     c.res
-        .json(&serde_json::json!({ "ok": true, "saved": saved }));
+        .json(serde_json::json!({ "ok": true, "saved": saved }));
 }
 
 async fn delete_file(c: &mut Ctx) {
@@ -276,11 +276,11 @@ async fn delete_file(c: &mut Ctx) {
     };
 
     match result {
-        Ok(_) => c.res.json(&serde_json::json!({ "ok": true })),
+        Ok(_) => c.res.json(serde_json::json!({ "ok": true })),
         Err(e) => {
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({ "error": e.to_string() }));
+                .json(serde_json::json!({ "error": e.to_string() }));
         }
     }
 }
@@ -305,11 +305,11 @@ async fn mkdir(c: &mut Ctx) {
     }
 
     match tokio::fs::create_dir_all(&target).await {
-        Ok(_) => c.res.json(&serde_json::json!({ "ok": true })),
+        Ok(_) => c.res.json(serde_json::json!({ "ok": true })),
         Err(e) => {
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({ "error": e.to_string() }));
+                .json(serde_json::json!({ "error": e.to_string() }));
         }
     }
 }
@@ -358,11 +358,11 @@ async fn move_entry(c: &mut Ctx) {
     }
 
     match tokio::fs::rename(&src, &final_dst).await {
-        Ok(_) => c.res.json(&serde_json::json!({ "ok": true })),
+        Ok(_) => c.res.json(serde_json::json!({ "ok": true })),
         Err(e) => {
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({ "error": e.to_string() }));
+                .json(serde_json::json!({ "error": e.to_string() }));
         }
     }
 }

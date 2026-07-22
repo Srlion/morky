@@ -191,7 +191,7 @@ async fn settings_handler(c: &mut Ctx) {
         Ok(s) => c.res.json(&s),
         Err(e) => {
             c.res.status(StatusCode::INTERNAL_SERVER_ERROR);
-            c.res.json(&serde_json::json!({ "error": e.to_string() }));
+            c.res.json(serde_json::json!({ "error": e.to_string() }));
         }
     }
 }
@@ -201,7 +201,7 @@ async fn update_settings_handler(c: &mut Ctx) {
         Ok(b) => b,
         Err(e) => {
             c.res.status(StatusCode::BAD_REQUEST);
-            c.res.json(&serde_json::json!({ "error": e.to_string() }));
+            c.res.json(serde_json::json!({ "error": e.to_string() }));
             return;
         }
     };
@@ -209,7 +209,7 @@ async fn update_settings_handler(c: &mut Ctx) {
         Ok(s) => c.res.json(&s),
         Err(e) => {
             c.res.status(StatusCode::INTERNAL_SERVER_ERROR);
-            c.res.json(&serde_json::json!({ "error": e.to_string() }));
+            c.res.json(serde_json::json!({ "error": e.to_string() }));
         }
     }
 }
@@ -219,7 +219,7 @@ async fn run_handler(c: &mut Ctx) {
         Ok(r) => r,
         Err(e) => {
             c.res.status(StatusCode::INTERNAL_SERVER_ERROR);
-            c.res.json(&serde_json::json!({ "error": e.to_string() }));
+            c.res.json(serde_json::json!({ "error": e.to_string() }));
             return;
         }
     };

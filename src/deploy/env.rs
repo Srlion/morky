@@ -22,8 +22,8 @@ pub fn inject_env(user_env: &HashMap<String, String>, mode: EnvMode) -> Vec<Stri
             .flat_map(|(k, v)| ["--env".into(), format!("{k}={v}")])
             .collect(),
         EnvMode::Build => user_env
-            .iter()
-            .flat_map(|(k, _)| ["--secret".into(), format!("id={k},env={k}")])
+            .keys()
+            .flat_map(|k| ["--secret".into(), format!("id={k},env={k}")])
             .collect(),
     }
 }

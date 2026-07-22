@@ -25,7 +25,7 @@ pub async fn require_auth(c: &mut Ctx) {
 pub async fn require_auth_api(c: &mut Ctx) {
     if !c.res.locals.contains_key("user") {
         c.res.status(StatusCode::UNAUTHORIZED);
-        c.res.json(&serde_json::json!({"error": "unauthorized"}));
+        c.res.json(serde_json::json!({"error": "unauthorized"}));
     } else {
         c.next().await;
     }

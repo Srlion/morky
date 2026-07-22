@@ -134,21 +134,20 @@ async fn load_routes() -> Vec<Route> {
         });
     }
 
-    if let Ok(settings) = Settings::get() {
-        if let Some(d) = settings
+    if let Ok(settings) = Settings::get()
+        && let Some(d) = settings
             .panel_domain
             .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty())
-        {
-            routes.push(Route {
-                project_id: -1,
-                app_id: -1,
-                domain: d.to_lowercase(),
-                backend_host: MORKY_CONTAINER.to_string(),
-                port: constants::port(),
-            });
-        }
+    {
+        routes.push(Route {
+            project_id: -1,
+            app_id: -1,
+            domain: d.to_lowercase(),
+            backend_host: MORKY_CONTAINER.to_string(),
+            port: constants::port(),
+        });
     }
     routes
 }

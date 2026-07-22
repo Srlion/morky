@@ -21,7 +21,7 @@ pub fn routes() -> Router {
         match event.action {
             SQLITE_INSERT | SQLITE_UPDATE => {
                 crate::tokio_handle().spawn(async move {
-                    if let Some(app) = App::get_by_id(row_id).await.ok() {
+                    if let Ok(app) = App::get_by_id(row_id).await {
                         globals::set(format!("app_status_{row_id}"), app.status);
                         globals::set(
                             format!("app_current_deployment_{row_id}"),
@@ -59,19 +59,19 @@ pub fn routes() -> Router {
 fn bad(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::BAD_REQUEST)
-        .json(&serde_json::json!({"error": msg}));
+        .json(serde_json::json!({"error": msg}));
 }
 
 fn not_found(c: &mut Ctx) {
     c.res
         .status(StatusCode::NOT_FOUND)
-        .json(&serde_json::json!({"error": "not found"}));
+        .json(serde_json::json!({"error": "not found"}));
 }
 
 fn fail(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::INTERNAL_SERVER_ERROR)
-        .json(&serde_json::json!({"error": msg}));
+        .json(serde_json::json!({"error": msg}));
 }
 
 #[derive(Deserialize)]
@@ -105,7 +105,7 @@ async fn create(c: &mut Ctx) {
         Err(_) => return bad(c, "invalid body"),
     };
     let name = body.name.trim();
-    if let Err(e) = validate_app_name(&name) {
+    if let Err(e) = validate_app_name(name) {
         return bad(c, e);
     }
     if body.repo.is_empty() || body.branch.is_empty() {
@@ -151,7 +151,7 @@ async fn delete(c: &mut Ctx) {
         return bad(c, "invalid id");
     };
     match App::delete(app_id).await {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => {
             tracing::error!("delete app: {e}");
             fail(c, "failed to delete");
@@ -220,7 +220,7 @@ async fn save_settings(c: &mut Ctx) {
         .apply()
         .await
     {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => fail(c, &format!("save: {e}")),
     }
 }
@@ -244,10 +244,10 @@ async fn save_general_settings(c: &mut Ctx) {
         .domain
         .map(|s| s.trim().to_lowercase())
         .filter(|s| !s.is_empty());
-    if let Some(ref d) = new_domain {
-        if !common::is_fqdn(d) {
-            return bad(c, "invalid domain format (use example.com)");
-        }
+    if let Some(ref d) = new_domain
+        && !common::is_fqdn(d)
+    {
+        return bad(c, "invalid domain format (use example.com)");
     }
 
     if let Err(e) = App::update(app_id)
@@ -259,7 +259,7 @@ async fn save_general_settings(c: &mut Ctx) {
         return fail(c, &format!("save: {e}"));
     }
 
-    c.res.json(&serde_json::json!({"ok": true}));
+    c.res.json(serde_json::json!({"ok": true}));
 }
 
 async fn deploy_action(c: &mut Ctx) {
@@ -283,7 +283,7 @@ async fn deploy_action(c: &mut Ctx) {
                 return bad(c, &e);
             }
             c.res
-                .json(&serde_json::json!({"ok": true, "deployment_id": d.id}));
+                .json(serde_json::json!({"ok": true, "deployment_id": d.id}));
         }
         Err(e) => {
             tracing::error!("create deployment: {e}");
@@ -304,7 +304,7 @@ async fn stop_action(c: &mut Ctx) {
         return bad(c, "app is not running");
     }
     match StopJob::queue(app_id).await {
-        Ok(()) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(()) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => bad(c, &e),
     }
 }
@@ -324,7 +324,7 @@ async fn start_action(c: &mut Ctx) {
         return bad(c, "no previous deployment to start from");
     }
     match StartJob::queue(app_id, None).await {
-        Ok(()) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(()) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => bad(c, &e),
     }
 }
@@ -346,16 +346,16 @@ async fn rollback_action(c: &mut Ctx) {
     if let Err(e) = RollbackJob::queue(app_id, deploy_id).await {
         return bad(c, &e);
     }
-    c.res.json(&serde_json::json!({"ok": true}));
+    c.res.json(serde_json::json!({"ok": true}));
 }
 
 async fn container_logs(c: &mut Ctx) {
     let Ok(app_id) = c.req.param::<i64>("app_id") else {
-        return c.res.json(&serde_json::json!({"log": ""}));
+        return c.res.json(serde_json::json!({"log": ""}));
     };
     let cname = container::name(app_id);
     let out = common::podman()
-        .args(&["logs", "--tail", "500", &cname])
+        .args(["logs", "--tail", "500", &cname])
         .output()
         .await;
     let log = match out {
@@ -372,7 +372,7 @@ async fn container_logs(c: &mut Ctx) {
         }
         Err(e) => format!("Error: {e}"),
     };
-    c.res.json(&serde_json::json!({"log": log}));
+    c.res.json(serde_json::json!({"log": log}));
 }
 
 async fn save_env(c: &mut Ctx) {
@@ -380,7 +380,7 @@ async fn save_env(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "invalid id"}));
+            .json(serde_json::json!({"error": "invalid id"}));
     };
 
     let env_vars = match c.req.text().await {
@@ -389,17 +389,17 @@ async fn save_env(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "invalid body"}));
+                .json(serde_json::json!({"error": "invalid body"}));
         }
     };
 
     match App::update(app_id).env_vars(env_vars).apply().await {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => {
             tracing::error!("save env: {e}");
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "failed to save"}));
+                .json(serde_json::json!({"error": "failed to save"}));
         }
     }
 }

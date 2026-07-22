@@ -24,16 +24,16 @@ pub fn routes() -> Router {
 
 async fn create_backup(c: &mut Ctx) {
     match jobs::enqueue(&BackupJob {}).await {
-        Ok(Some(id)) => c.res.json(&serde_json::json!({"ok": true, "job_id": id})),
+        Ok(Some(id)) => c.res.json(serde_json::json!({"ok": true, "job_id": id})),
         Ok(None) => c
             .res
             .status(StatusCode::CONFLICT)
-            .json(&serde_json::json!({"error": "a backup is already in progress"})),
+            .json(serde_json::json!({"error": "a backup is already in progress"})),
         Err(e) => {
             tracing::error!("enqueue backup: {e}");
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "failed to start backup"}));
+                .json(serde_json::json!({"error": "failed to start backup"}));
         }
     }
 }
@@ -52,7 +52,7 @@ async fn backup_status(c: &mut Ctx) {
 
     let (status, error) = job.unwrap_or(("none".into(), None));
 
-    c.res.json(&serde_json::json!({
+    c.res.json(serde_json::json!({
         "has_backup": has_zip,
         "job_status": status,
         "error": error,
@@ -65,7 +65,7 @@ async fn download_backup(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::NOT_FOUND)
-            .json(&serde_json::json!({"error": "no backup available, create one first"}));
+            .json(serde_json::json!({"error": "no backup available, create one first"}));
     }
 
     let res = c
@@ -85,7 +85,7 @@ async fn download_backup(c: &mut Ctx) {
         tracing::error!("send backup file: {e}");
         c.res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({"error": "failed to send backup file"}));
+            .json(serde_json::json!({"error": "failed to send backup file"}));
     }
 }
 
@@ -142,12 +142,11 @@ async fn do_backup() -> Result<(), String> {
     let mut paused: Vec<String> = Vec::new();
     for app_id in &apps {
         let name = format!("app-{app_id}");
-        if is_container_running(&name).await {
-            if let Ok(o) = podman().args(["pause", &name]).output().await {
-                if o.status.success() {
-                    paused.push(name);
-                }
-            }
+        if is_container_running(&name).await
+            && let Ok(o) = podman().args(["pause", &name]).output().await
+            && o.status.success()
+        {
+            paused.push(name);
         }
     }
 

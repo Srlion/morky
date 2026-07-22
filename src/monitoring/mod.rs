@@ -70,8 +70,8 @@ async fn system_sampler() {
 
         let (dt, du) = match nix::sys::statvfs::statvfs("/") {
             Ok(stat) => {
-                let total = stat.blocks() as u64 * stat.fragment_size() as u64;
-                let avail = stat.blocks_available() as u64 * stat.fragment_size() as u64;
+                let total = stat.blocks() * stat.fragment_size();
+                let avail = stat.blocks_available() * stat.fragment_size();
                 (total, total - avail)
             }
             Err(_) => (0, 0),
@@ -80,8 +80,8 @@ async fn system_sampler() {
 
         let s = SystemStats {
             cpu_percent: r1(cpu),
-            mem_total_mb: (mem_total / 1_048_576) as u64,
-            mem_used_mb: (mem_used / 1_048_576) as u64,
+            mem_total_mb: (mem_total / 1_048_576),
+            mem_used_mb: (mem_used / 1_048_576),
             mem_percent: r1(mem_pct),
             disk_total_gb: r2(dt as f64 / gib),
             disk_used_gb: r2(du as f64 / gib),
@@ -274,7 +274,7 @@ async fn podman_disk_handler(c: &mut Ctx) {
         _ => 0,
     };
 
-    c.res.json(&serde_json::json!({
+    c.res.json(serde_json::json!({
         "podman": podman_data,
         "buildkit_bytes": buildkit_bytes,
     }));

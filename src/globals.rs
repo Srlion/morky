@@ -7,7 +7,7 @@ use tokio::sync::broadcast;
 
 use crate::common::TtlMap;
 
-static GLOBALS: std::sync::LazyLock<Globals> = std::sync::LazyLock::new(|| Globals::new());
+static GLOBALS: std::sync::LazyLock<Globals> = std::sync::LazyLock::new(Globals::new);
 
 #[inline]
 pub fn set(key: impl Into<String>, val: impl Into<Value>) {

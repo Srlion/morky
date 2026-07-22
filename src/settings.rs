@@ -19,7 +19,7 @@ async fn get(c: &mut Ctx) {
         Err(e) => c
             .res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({"error": e.to_string()})),
+            .json(serde_json::json!({"error": e.to_string()})),
     }
 }
 
@@ -36,7 +36,7 @@ async fn update(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "invalid"}));
+                .json(serde_json::json!({"error": "invalid"}));
         }
     };
 
@@ -44,13 +44,13 @@ async fn update(c: &mut Ctx) {
         .panel_domain
         .map(|s| s.trim().to_lowercase())
         .filter(|s| !s.is_empty());
-    if let Some(ref d) = pd {
-        if !crate::common::is_fqdn(d) {
-            return c
-                .res
-                .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "invalid domain"}));
-        }
+    if let Some(ref d) = pd
+        && !crate::common::is_fqdn(d)
+    {
+        return c
+            .res
+            .status(StatusCode::BAD_REQUEST)
+            .json(serde_json::json!({"error": "invalid domain"}));
     }
 
     let header = body
@@ -66,11 +66,11 @@ async fn update(c: &mut Ctx) {
     match update.apply().await {
         Ok(settings) => c
             .res
-            .json(&serde_json::json!({"ok": true, "settings": settings})),
+            .json(serde_json::json!({"ok": true, "settings": settings})),
         Err(e) => c
             .res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({"error": e.to_string()})),
+            .json(serde_json::json!({"error": e.to_string()})),
     }
 }
 
@@ -87,7 +87,7 @@ async fn change_password(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "invalid"}));
+                .json(serde_json::json!({"error": "invalid"}));
         }
     };
 
@@ -95,7 +95,7 @@ async fn change_password(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "password must be at least 8 characters"}));
+            .json(serde_json::json!({"error": "password must be at least 8 characters"}));
     }
 
     let user: &crate::models::User = c.res.locals.get("user").unwrap();
@@ -105,7 +105,7 @@ async fn change_password(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "failed to load user"}));
+                .json(serde_json::json!({"error": "failed to load user"}));
         }
     };
 
@@ -113,13 +113,13 @@ async fn change_password(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "no password set"}));
+            .json(serde_json::json!({"error": "no password set"}));
     };
     let Ok(parsed) = PasswordHash::new(stored) else {
         return c
             .res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({"error": "internal error"}));
+            .json(serde_json::json!({"error": "internal error"}));
     };
     if Argon2::default()
         .verify_password(body.current_password.as_bytes(), &parsed)
@@ -128,7 +128,7 @@ async fn change_password(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::UNAUTHORIZED)
-            .json(&serde_json::json!({"error": "current password is incorrect"}));
+            .json(serde_json::json!({"error": "current password is incorrect"}));
     }
 
     let salt = SaltString::generate(&mut OsRng);
@@ -138,15 +138,15 @@ async fn change_password(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "failed to hash password"}));
+                .json(serde_json::json!({"error": "failed to hash password"}));
         }
     };
 
     match User::update_password(user.id, &hash).await {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => c
             .res
             .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .json(&serde_json::json!({"error": e.to_string()})),
+            .json(serde_json::json!({"error": e.to_string()})),
     }
 }

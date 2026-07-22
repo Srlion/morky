@@ -69,7 +69,7 @@ pub fn register<J: Job>() {
     REGISTRY.lock().unwrap().insert(J::NAME, Arc::new(def));
 }
 
-pub(self) fn get_def(name: &str) -> Option<Arc<JobDef>> {
+fn get_def(name: &str) -> Option<Arc<JobDef>> {
     REGISTRY.lock().unwrap().get(name).cloned()
 }
 

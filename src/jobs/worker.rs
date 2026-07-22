@@ -26,10 +26,10 @@ pub fn start() {
             .query("UPDATE jobs SET status = 'pending' WHERE status = 'running'")
             .execute()
             .await;
-        if let Ok(r) = r {
-            if r.rows_affected() > 0 {
-                tracing::info!("reset {} interrupted jobs to pending", r.rows_affected());
-            }
+        if let Ok(r) = r
+            && r.rows_affected() > 0
+        {
+            tracing::info!("reset {} interrupted jobs to pending", r.rows_affected());
         }
         notify();
     });

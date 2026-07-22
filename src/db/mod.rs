@@ -209,7 +209,7 @@ impl<T: FromRow + Send + 'static> QAs<T> {
         send(move |c| {
             let mut s = c.prepare_cached(&self.sql)?;
             let mut rows = s.query(p(&params).as_slice())?;
-            Ok(rows.next()?.map(T::from_row).transpose()?)
+            rows.next()?.map(T::from_row).transpose()
         })
         .await
     }
@@ -347,7 +347,7 @@ impl<'a, 'b, T: FromRow> TxQAs<'a, 'b, T> {
     pub fn fetch_optional(self) -> rusqlite::Result<Option<T>> {
         let mut s = self.tx.0.prepare_cached(&self.sql)?;
         let mut rows = s.query(p_boxed(&self.params).as_slice())?;
-        Ok(rows.next()?.map(T::from_row).transpose()?)
+        rows.next()?.map(T::from_row).transpose()
     }
 
     pub fn fetch_all(self) -> rusqlite::Result<Vec<T>> {

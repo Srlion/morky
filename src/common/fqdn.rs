@@ -10,5 +10,5 @@ pub fn is_fqdn(domain: &str) -> bool {
         && !p.starts_with('-')
         && !p.ends_with('-')
     })
-    && parts.last().map_or(false, |tld| tld.chars().any(|c| c.is_ascii_alphabetic()))
+    && parts.last().is_some_and(|tld| tld.chars().any(|c| c.is_ascii_alphabetic()))
 }

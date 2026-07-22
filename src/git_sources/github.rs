@@ -297,7 +297,7 @@ async fn install_redirect(c: &mut Ctx) {
         Err(_) => return render_err(c, "Corrupt source data."),
     };
     c.res.redirect(
-        &format!(
+        format!(
             "https://github.com/apps/{}/installations/new",
             data.app_slug
         ),
@@ -329,7 +329,7 @@ async fn install_callback(c: &mut Ctx) {
             s.provider == "github"
                 && s.provider_data
                     .get("installation_id")
-                    .map_or(true, |v| v.is_null())
+                    .is_none_or(|v| v.is_null())
         })
         .collect();
 
@@ -366,7 +366,7 @@ async fn delete(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "invalid id"}));
+            .json(serde_json::json!({"error": "invalid id"}));
     };
 
     let source = match GitSource::get_by_id(id).await {
@@ -375,7 +375,7 @@ async fn delete(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::NOT_FOUND)
-                .json(&serde_json::json!({"error": "source not found"}));
+                .json(serde_json::json!({"error": "source not found"}));
         }
     };
 
@@ -385,7 +385,7 @@ async fn delete(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "corrupt source data"}));
+                .json(serde_json::json!({"error": "corrupt source data"}));
         }
     };
 
@@ -406,7 +406,7 @@ async fn delete(c: &mut Ctx) {
                         let body = r.text().await.unwrap_or_default();
                         tracing::error!(iid, "delete installation: {body}");
                         return c.res.status(StatusCode::BAD_GATEWAY).json(
-                            &serde_json::json!({"error": "failed to remove GitHub installation"}),
+                            serde_json::json!({"error": "failed to remove GitHub installation"}),
                         );
                     }
                     Err(e) => {
@@ -414,7 +414,7 @@ async fn delete(c: &mut Ctx) {
                         return c
                             .res
                             .status(StatusCode::BAD_GATEWAY)
-                            .json(&serde_json::json!({"error": "failed to contact GitHub"}));
+                            .json(serde_json::json!({"error": "failed to contact GitHub"}));
                     }
                 }
             }
@@ -423,18 +423,18 @@ async fn delete(c: &mut Ctx) {
                 return c
                     .res
                     .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .json(&serde_json::json!({"error": "failed to authenticate with GitHub"}));
+                    .json(serde_json::json!({"error": "failed to authenticate with GitHub"}));
             }
         }
     }
 
     match GitSource::delete(id).await {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => {
             tracing::error!(source_id = id, "delete git source: {e}");
             c.res
                 .status(StatusCode::INTERNAL_SERVER_ERROR)
-                .json(&serde_json::json!({"error": "failed to delete source"}));
+                .json(serde_json::json!({"error": "failed to delete source"}));
         }
     }
 }
@@ -452,7 +452,7 @@ async fn create_manifest(c: &mut Ctx) {
         Ok(h) => h,
         Err(e) => {
             c.res.status(StatusCode::INTERNAL_SERVER_ERROR);
-            return c.res.json(&serde_json::json!({ "message": e }));
+            return c.res.json(serde_json::json!({ "message": e }));
         }
     };
     let cb = format!("{host}/git-sources/github/callback/{token}");
@@ -479,11 +479,11 @@ async fn create_manifest(c: &mut Ctx) {
     };
 
     c.res
-        .json(&serde_json::json!({ "github_url": github_url, "manifest": manifest.to_string() }));
+        .json(serde_json::json!({ "github_url": github_url, "manifest": manifest.to_string() }));
 }
 
 fn render_err(c: &mut Ctx, msg: &str) {
     let encoded: String = form_urlencoded::byte_serialize(msg.as_bytes()).collect();
     c.res
-        .redirect(&format!("/git-sources?error={encoded}"), None);
+        .redirect(format!("/git-sources?error={encoded}"), None);
 }

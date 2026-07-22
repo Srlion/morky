@@ -33,7 +33,7 @@ async fn rename(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "invalid id"}));
+            .json(serde_json::json!({"error": "invalid id"}));
     };
     let body: RenameBody = match c.req.json().await {
         Ok(b) => b,
@@ -41,7 +41,7 @@ async fn rename(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "invalid body"}));
+                .json(serde_json::json!({"error": "invalid body"}));
         }
     };
     let name = body.name.trim();
@@ -49,10 +49,10 @@ async fn rename(c: &mut Ctx) {
         return c
             .res
             .status(StatusCode::BAD_REQUEST)
-            .json(&serde_json::json!({"error": "name required"}));
+            .json(serde_json::json!({"error": "name required"}));
     }
     match GitSource::update_name(id, name).await {
-        Ok(_) => c.res.json(&serde_json::json!({"ok": true})),
+        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
         Err(e) => {
             let msg = if e.to_string().contains("UNIQUE") {
                 "name already exists"
@@ -61,7 +61,7 @@ async fn rename(c: &mut Ctx) {
             };
             c.res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": msg}));
+                .json(serde_json::json!({"error": msg}));
         }
     }
 }
@@ -86,7 +86,7 @@ async fn list_repos(c: &mut Ctx) {
         Err(e) => c
             .res
             .status(StatusCode::BAD_GATEWAY)
-            .json(&serde_json::json!({"error": e})),
+            .json(serde_json::json!({"error": e})),
     }
 }
 
@@ -102,7 +102,7 @@ async fn list_branches(c: &mut Ctx) {
             return c
                 .res
                 .status(StatusCode::BAD_REQUEST)
-                .json(&serde_json::json!({"error": "missing ?repo="}));
+                .json(serde_json::json!({"error": "missing ?repo="}));
         }
     };
     let Some(data) = get_github_data(c).await else {
@@ -113,7 +113,7 @@ async fn list_branches(c: &mut Ctx) {
         Err(e) => c
             .res
             .status(StatusCode::BAD_GATEWAY)
-            .json(&serde_json::json!({"error": e})),
+            .json(serde_json::json!({"error": e})),
     }
 }
 
@@ -124,7 +124,7 @@ async fn get_github_data(c: &mut Ctx) -> Option<GithubData> {
     if data.installation_id.is_none() {
         c.res
             .status(StatusCode::BAD_GATEWAY)
-            .json(&serde_json::json!({"error": "not installed"}));
+            .json(serde_json::json!({"error": "not installed"}));
         return None;
     }
     Some(data)

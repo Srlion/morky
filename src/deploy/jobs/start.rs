@@ -18,12 +18,7 @@ pub struct StartJob {
 
 impl StartJob {
     pub async fn queue(app_id: i64, deploy_id: Option<i64>) -> Result<(), String> {
-        jobs::enqueue(&Self {
-            app_id,
-            deploy_id: deploy_id,
-        })
-        .await
-        .map(|_| ())
+        jobs::enqueue(&Self { app_id, deploy_id }).await.map(|_| ())
     }
 }
 

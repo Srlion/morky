@@ -33,10 +33,7 @@ where
     E: From<&'static str>,
 {
     let token = create(deploy_id);
-    let result = token
-        .run_until_cancelled(f())
-        .await
-        .ok_or_else(|| "cancelled".into());
+    let result = token.run_until_cancelled(f()).await.ok_or("cancelled");
     remove(deploy_id);
     result?
 }

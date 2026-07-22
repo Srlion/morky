@@ -18,7 +18,7 @@ pub fn routes() -> Router {
         match event.action {
             SQLITE_INSERT | SQLITE_UPDATE => {
                 crate::tokio_handle().spawn(async move {
-                    if let Some(deploy) = Deployment::get_by_id(row_id).await.ok() {
+                    if let Ok(deploy) = Deployment::get_by_id(row_id).await {
                         globals::set(format!("deploy_status_{}", deploy.id), deploy.status);
 
                         globals::set(
@@ -47,13 +47,13 @@ pub fn routes() -> Router {
 fn bad(c: &mut Ctx, msg: &str) {
     c.res
         .status(StatusCode::BAD_REQUEST)
-        .json(&serde_json::json!({"error": msg}));
+        .json(serde_json::json!({"error": msg}));
 }
 
 fn not_found(c: &mut Ctx) {
     c.res
         .status(StatusCode::NOT_FOUND)
-        .json(&serde_json::json!({"error": "not found"}));
+        .json(serde_json::json!({"error": "not found"}));
 }
 
 #[derive(Deserialize)]
@@ -121,7 +121,7 @@ async fn list_deployments(c: &mut Ctx) {
         })
         .collect();
 
-    c.res.json(&serde_json::json!({
+    c.res.json(serde_json::json!({
         "items": items,
         "total": total,
         "page": q.page,
@@ -154,12 +154,12 @@ async fn cancel_deploy(c: &mut Ctx) {
         return bad(c, "deployment is not building");
     }
     deploy::cancel_deploy(deploy_id);
-    c.res.json(&serde_json::json!({"ok": true}));
+    c.res.json(serde_json::json!({"ok": true}));
 }
 
 async fn get_log(c: &mut Ctx) {
     let Ok(deploy_id) = c.req.param::<i64>("deploy_id") else {
-        return c.res.json(&serde_json::json!({"lines":[],"status":""}));
+        return c.res.json(serde_json::json!({"lines":[],"status":""}));
     };
     let status = Deployment::get_by_id(deploy_id)
         .await
@@ -169,7 +169,7 @@ async fn get_log(c: &mut Ctx) {
         .await
         .unwrap_or_default();
 
-    c.res.json(&serde_json::json!({
+    c.res.json(serde_json::json!({
         "lines": lines,
         "status": status,
     }));
@@ -251,7 +251,7 @@ async fn get_container_log(c: &mut Ctx) {
         .unwrap_or_default();
     lines.reverse();
 
-    c.res.json(&serde_json::json!({
+    c.res.json(serde_json::json!({
         "lines": lines,
         "offset": q.offset,
         "total": total,

@@ -45,9 +45,8 @@ pub async fn ensure_running() -> anyhow::Result<Guard> {
     LAST_USED.store(now_secs(), Relaxed);
 
     if !is_ready().await {
-        start().await.map_err(|e| {
+        start().await.inspect_err(|_e| {
             ACTIVE.fetch_sub(1, Relaxed);
-            e
         })?;
     }
 

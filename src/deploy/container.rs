@@ -66,11 +66,7 @@ pub async fn start(deployment: &Deployment, log_to: Option<i64>) -> Result<(), S
     }
 
     args.extend(inject_env(&deployment.env_vars, EnvMode::Runtime));
-    args.extend([
-        "--workdir".into(),
-        "/app".into(),
-        deployment.image_tag().into(),
-    ]);
+    args.extend(["--workdir".into(), "/app".into(), deployment.image_tag()]);
 
     let refs: Vec<&str> = args.iter().map(String::as_str).collect();
     match log_to {
@@ -158,10 +154,10 @@ pub async fn stop_log_tailer(app_id: i64, _deploy_id: Option<i64>) {
 }
 
 fn parse_log_line(line: &str) -> (i64, &str) {
-    if let Some((ts_str, rest)) = line.split_once(' ') {
-        if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts_str.trim()) {
-            return (dt.timestamp(), rest);
-        }
+    if let Some((ts_str, rest)) = line.split_once(' ')
+        && let Ok(dt) = chrono::DateTime::parse_from_rfc3339(ts_str.trim())
+    {
+        return (dt.timestamp(), rest);
     }
     (chrono::Utc::now().timestamp(), line)
 }
