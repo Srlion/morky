@@ -13,4 +13,5 @@ export const DeployStatus = /** @type {const} */ ({
   DONE: "done",
   FAILED: "failed",
   CANCELLED: "cancelled",
+  SUPERSEDED: "superseded",
 });

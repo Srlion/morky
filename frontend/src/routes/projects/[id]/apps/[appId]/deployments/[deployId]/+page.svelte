@@ -37,9 +37,12 @@
     const deployId = $derived(page.params.deployId);
     const isDone = $derived(
         deployment &&
-            [DeployStatus.FAILED, DeployStatus.DONE].includes(
-                deployment.status,
-            ),
+            [
+                DeployStatus.DONE,
+                DeployStatus.FAILED,
+                DeployStatus.CANCELLED,
+                DeployStatus.SUPERSEDED,
+            ].includes(deployment.status),
     );
     const hasMoreLogs = $derived(containerLines.length < containerTotal);
     const liveStatus = $derived(
