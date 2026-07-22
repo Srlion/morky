@@ -29,6 +29,8 @@ pub enum DeployStatus {
     Failed,
     /// Cancelled.
     Cancelled,
+    /// Superseded.
+    Superseded,
 }
 
 macro_rules! impl_status {
@@ -76,9 +78,6 @@ impl_status!(AppStatus,
 );
 
 impl_status!(DeployStatus,
-    Building => "building",
-    Deploying => "deploying",
-    Done => "done",
-    Failed => "failed",
-    Cancelled => "cancelled",
+    Building => "building", Deploying => "deploying", Done => "done",
+    Failed => "failed", Cancelled => "cancelled", Superseded => "superseded",
 );
