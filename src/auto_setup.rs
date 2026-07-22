@@ -55,7 +55,7 @@ pub async fn run() {
                 .parent()
                 .unwrap_or(std::path::Path::new("."))
                 .join("admin_credentials");
-            if let Err(e) = std::fs::write(&path, &creds) {
+            if let Err(e) = crate::common::write_secret_file(&path, &creds) {
                 tracing::error!("auto_setup: failed to write credentials file: {e}");
             }
         }

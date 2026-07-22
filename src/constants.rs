@@ -8,7 +8,7 @@ pub fn cookie_secret_key() -> String {
             return k.trim().to_string();
         }
         let key = crate::common::hex::encode(&rand::random::<[u8; 64]>());
-        let _ = std::fs::write(&path, &key);
+        let _ = crate::common::write_secret_file(&path, &key);
         key
     });
     KEY.clone()

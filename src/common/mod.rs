@@ -53,3 +53,15 @@ impl<T, E: std::fmt::Display> LogErr<T> for Result<T, E> {
         }
     }
 }
+
+pub fn write_secret_file(path: &std::path::Path, contents: &str) -> std::io::Result<()> {
+    use std::io::Write;
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    opts.open(path)?.write_all(contents.as_bytes())
+}
