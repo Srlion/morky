@@ -7,7 +7,9 @@ pub struct DockerfileBuilder;
 
 impl Builder for DockerfileBuilder {
     async fn build(&self, deployment: &Deployment) -> Result<(), String> {
-        let _g = buildkit::ensure_running().await;
+        let _g = buildkit::ensure_running()
+            .await
+            .map_err(|e| format!("buildkit: {e}"))?;
         let deploy_id = deployment.id;
         let work_dir = deployment.work_dir();
         let repo_dir = deployment.repo_dir();
