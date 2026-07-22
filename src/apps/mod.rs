@@ -150,8 +150,48 @@ async fn delete(c: &mut Ctx) {
     let Ok(app_id) = c.req.param::<i64>("app_id") else {
         return bad(c, "invalid id");
     };
+    if App::get_by_id(app_id).await.is_err() {
+        return not_found(c);
+    }
+
+    // container
+    let cname = container::name(app_id);
+    let _ = common::podman()
+        .args(["stop", "--time", "10", &cname])
+        .output()
+        .await;
+    container::stop_log_tailer(app_id, None).await;
+    let _ = common::podman().args(["rm", "-f", &cname]).output().await;
+
+    // 2. images (all deploy tags for this app)
+    if let Ok(o) = common::podman()
+        .args(["images", "--format", "{{.Repository}}:{{.Tag}}"])
+        .output()
+        .await
+    {
+        let needle = format!("app-{app_id}:deploy-");
+        for img in String::from_utf8_lossy(&o.stdout)
+            .lines()
+            .map(str::trim)
+            .filter(|l| l.contains(&needle))
+        {
+            let _ = common::podman().args(["rmi", "-f", img]).output().await;
+        }
+    }
+
+    // volume dir
+    let vol = format!(
+        "{}/volumes/app-{app_id}",
+        crate::constants::morky_data_dir()
+    );
+    let _ = tokio::fs::remove_dir_all(&vol).await;
+
+    // db row + stale globals
     match App::delete(app_id).await {
-        Ok(_) => c.res.json(serde_json::json!({"ok": true})),
+        Ok(_) => {
+            globals::set(format!("app_deploy_status_{app_id}"), ());
+            c.res.json(serde_json::json!({"ok": true}))
+        }
         Err(e) => {
             tracing::error!("delete app: {e}");
             fail(c, "failed to delete");
