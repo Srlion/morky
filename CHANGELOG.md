@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.13](https://github.com/Srlion/morky/compare/v0.8.12...v0.8.13) (2026-07-23)
+
+
+### Bug Fixes
+
+* fix container logs being stale ([ea74cbe](https://github.com/Srlion/morky/commit/ea74cbebc2247274d0d86efc93257a7e97a0c584))
+
 ## [0.8.12](https://github.com/Srlion/morky/compare/v0.8.11...v0.8.12) (2026-07-22)
 
 
