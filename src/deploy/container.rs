@@ -103,6 +103,14 @@ async fn log_marker(deploy_id: i64, text: &str) {
 }
 
 pub fn start_log_tailer(app_id: i64, deploy_id: i64) {
+    spawn_tailer(app_id, deploy_id, false);
+}
+
+pub fn resume_log_tailer(app_id: i64, deploy_id: i64) {
+    spawn_tailer(app_id, deploy_id, true);
+}
+
+fn spawn_tailer(app_id: i64, deploy_id: i64, resume: bool) {
     let mut tailers = TAILERS.lock().unwrap();
     if tailers.contains_key(&app_id) {
         return;
@@ -113,13 +121,15 @@ pub fn start_log_tailer(app_id: i64, deploy_id: i64) {
     drop(tailers);
 
     tokio::spawn(async move {
-        log_marker(deploy_id, "--- container started ---").await;
-        tail_logs(app_id, deploy_id, token)
+        if resume {
+            log_marker(deploy_id, "--- log tailer resumed ---").await;
+        } else {
+            log_marker(deploy_id, "--- container started ---").await;
+        }
+        tail_logs(app_id, deploy_id, token, resume)
             .await
             .log_err("log tailer failed");
         log_marker(deploy_id, "--- container stopped ---").await;
-
-        // remove only our own entry, never a successor's
         let mut t = TAILERS.lock().unwrap();
         if t.get(&app_id).map(|(g, _)| *g) == Some(generation) {
             t.remove(&app_id);
@@ -127,10 +137,21 @@ pub fn start_log_tailer(app_id: i64, deploy_id: i64) {
     });
 }
 
-async fn tail_logs(app_id: i64, deploy_id: i64, token: CancellationToken) -> std::io::Result<()> {
+async fn tail_logs(
+    app_id: i64,
+    deploy_id: i64,
+    token: CancellationToken,
+    resume: bool,
+) -> std::io::Result<()> {
     let (reader, writer) = std::io::pipe()?;
+    let cname = name(app_id);
+    let mut args = vec!["logs", "-f", "--timestamps"];
+    if resume {
+        args.extend(["--tail", "0"]);
+    }
+    args.push(&cname);
     let mut child = podman()
-        .args(["logs", "-f", "--timestamps", &name(app_id)])
+        .args(&args)
         .stdout(writer.try_clone()?)
         .stderr(writer)
         .spawn()?;

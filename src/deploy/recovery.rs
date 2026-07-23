@@ -23,6 +23,13 @@ pub async fn check_containers() {
             .unwrap_or(false);
 
         if alive {
+            // container survived the panel restart — re-attach the log tailer
+            if App::containers_enabled(app_id).await
+                && let Ok(app) = App::get_by_id(app_id).await
+                && let Some(did) = app.current_deployment_id
+            {
+                container::resume_log_tailer(app_id, did);
+            }
             continue;
         }
 
